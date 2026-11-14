@@ -81,7 +81,7 @@ public sealed class GeminiApiClient : IGeminiApiClient
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
         var endpoint = new Uri(ApiBase + "models/" + Uri.EscapeDataString(_model) + ":generateContent");
-        using var request = CreateRequest(HttpMethod.Post, endpoint, apiKey);
+        var request = CreateRequest(HttpMethod.Post, endpoint, apiKey);
         request.Content = new StringContent(
             JsonSerializer.Serialize(new
             {
