@@ -37,6 +37,30 @@ public sealed class GeminiApiClientTests
         Assert.Equal("secret", handler.ApiKeyHeader);
     }
 
+
+    [Fact]
+    public async Task TranscribeAudioAsync_SendsAudioAsInlineWavData()
+    {
+        using var handler = new RecordingHandler(request =>
+        {
+            var body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            Assert.Contains("audio/wav", body);
+            Assert.Contains("AQIDBA==", body);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"candidates":[{"content":{"parts":[{"text":"Chrome kholo"}]}}]}""", Encoding.UTF8, "application/json")
+            };
+        });
+        using var http = new HttpClient(handler);
+        var client = new GeminiApiClient(http);
+
+        var transcript = await client.TranscribeAudioAsync("voice-secret", new byte[] { 1, 2, 3, 4 });
+
+        Assert.Equal("Chrome kholo", transcript);
+        Assert.Equal("voice-secret", handler.ApiKeyHeader);
+        Assert.DoesNotContain("voice-secret", handler.RequestUri!.ToString());
+    }
+
     [Fact]
     public async Task ValidateApiKey_WhenUnauthorized_ThrowsSafeError()
     {
