@@ -31,6 +31,9 @@ public partial class App : WpfApplication
                 services.AddSingleton<GeminiDeviceConfiguration>();
                 services.AddSingleton<IMicrophoneRecorder, WindowsMicrophoneRecorder>();
                 services.AddSingleton<ITextToSpeech, WindowsTextToSpeech>();
+                services.AddHttpClient<IWakeWordModelManager, VoskWakeWordModelManager>(client =>
+                    client.Timeout = TimeSpan.FromMinutes(5));
+                services.AddSingleton<IWakeWordListener, VoskWakeWordListener>();
                 services.AddSingleton<MainWindow>();
             })
             .Build();
