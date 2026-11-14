@@ -1,5 +1,41 @@
 # NERO
 
-NERO is a Windows-first, voice-oriented AI desktop assistant.
+NERO is a Windows-first, voice-oriented AI desktop assistant built for Windows 11.
 
-This repository is being established incrementally. See the project documentation and implementation milestones as they are added.
+## Current status — Phase 1 foundation
+
+This branch establishes the first real application foundation:
+
+- .NET 10 solution with a WPF desktop application.
+- Dependency-injection host and application lifecycle wiring.
+- A small platform-neutral core project.
+- Core unit-test project.
+- Windows GitHub Actions restore, build and test workflow.
+- Shared build settings and secret-safe `.gitignore`.
+- Initial architecture and security documentation.
+
+The dashboard is intentionally honest: microphone capture and AI provider integration are not configured or running yet.
+
+## Requirements
+
+- .NET 10 SDK
+- Windows 10/11 for running the WPF application
+- Visual Studio 2022 with .NET desktop development workload, or the .NET CLI
+
+## Build and test
+
+```powershell
+dotnet restore NERO.sln
+dotnet build NERO.sln --configuration Release
+dotnet test NERO.sln --configuration Release
+```
+
+## Roadmap
+
+Development proceeds milestone by milestone: desktop lifecycle and tray behavior, device-local Gemini credential setup, real voice pipeline, AI orchestration and permission-gated tools, Windows/browser/document agents, local memory, licensing, signed updates, backend/admin services, and production installer.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Security
+
+Never commit API keys, passwords, signing certificates, or local secrets. Gemini credentials will be device-local and stored through Windows Credential Manager when that feature is implemented. No microphone capture starts in the current foundation.
