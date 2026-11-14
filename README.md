@@ -12,7 +12,7 @@ The desktop screen includes a basic prompt panel that sends a user-entered promp
 
 The application now has a device-local Gemini setup flow. A user can enter a key, validate it with Google's Gemini API, save it to Windows Credential Manager, replace it, or remove it. The secret is sent in the `x-goog-api-key` HTTP header and is not stored in `settings.json`.
 
-The Windows microphone, wake word, speech recognition, tray integration, and automatic startup registration are not yet implemented.
+A user-triggered push-to-talk recording flow is also available: audio is buffered locally and sent once to Gemini only after the user clicks Stop & send. Background wake-word detection and spoken TTS responses are not yet implemented.
 
 ## Current status — Phase 1 foundation
 
