@@ -38,7 +38,7 @@ public partial class App : Application
 
     private async void OnExit(object sender, ExitEventArgs e)
     {
-        (MainWindow as MainWindow)?.DisposeTrayIcon();
+        if (MainWindow is NERO.Desktop.MainWindow neroWindow) neroWindow.DisposeTrayIcon();
         if (_host is not null)
         {
             await _host.StopAsync(TimeSpan.FromSeconds(5));
