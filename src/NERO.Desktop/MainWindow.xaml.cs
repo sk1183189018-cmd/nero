@@ -9,11 +9,13 @@ public partial class MainWindow : Window
 {
     private readonly JsonNeroUserSettingsStore _settingsStore;
     private readonly GeminiDeviceConfiguration _geminiConfiguration;
+    private readonly IGeminiApiClient _geminiClient;
 
-    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration)
+    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient)
     {
         _settingsStore = settingsStore;
         _geminiConfiguration = geminiConfiguration;
+        _geminiClient = geminiClient;
         InitializeComponent();
         Loaded += MainWindow_Loaded;
     }
@@ -46,6 +48,7 @@ public partial class MainWindow : Window
         GeminiConnectionStateText.Text = configured ? "API key saved securely on this device" : "Setup required — no device API key";
         GeminiStatusText.Text = configured ? "Gemini key is configured. Replace or remove it below." : "Enter your Gemini API key to connect this device.";
         RemoveGeminiKeyButton.IsEnabled = configured;
+        AskGeminiButton.IsEnabled = configured;
     }
 
     private async void SaveGeminiKey_Click(object sender, RoutedEventArgs e)
@@ -82,7 +85,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void RemoveGeminiKey_Click(object sender, RoutedEventArgs e)
+    private async void AskGemini_Click(object sender, RoutedEventArgs e)\n    {\n        var prompt = GeminiPromptTextBox.Text;\n        if (string.IsNullOrWhiteSpace(prompt))\n        {\n            GeminiResponseText.Text = "Enter a question first.";\n            return;\n        }\n\n        AskGeminiButton.IsEnabled = false;\n        GeminiResponseText.Text = "NERO is waiting for Gemini…";\n        try\n        {\n            var apiKey = _geminiConfiguration.GetApiKeyForRequest();\n            GeminiResponseText.Text = await _geminiClient.GenerateTextAsync(apiKey, prompt);\n        }\n        catch (Exception ex)\n        {\n            GeminiResponseText.Text = $"Gemini request failed: {ex.Message}";\n        }\n        finally\n        {\n            AskGeminiButton.IsEnabled = _geminiConfiguration.IsConfigured;\n        }\n    }\n\n    private void RemoveGeminiKey_Click(object sender, RoutedEventArgs e)
     {
         if (!_geminiConfiguration.IsConfigured)
         {
