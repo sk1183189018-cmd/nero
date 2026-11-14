@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows;
+using WpfApplication = System.Windows.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NERO.AI;
@@ -8,7 +9,7 @@ using NERO.Security;
 
 namespace NERO.Desktop;
 
-public partial class App : Application
+public partial class App : WpfApplication
 {
     private const string MutexName = @"Local\NERO.Desktop.SingleInstance";
     private Mutex? _mutex;
