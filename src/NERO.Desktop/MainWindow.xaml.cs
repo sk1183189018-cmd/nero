@@ -73,7 +73,8 @@ public partial class MainWindow : Window
         GeminiStatusText.Text = configured ? "Gemini key is configured. Replace or remove it below." : "Enter your Gemini API key to connect this device.";
         RemoveGeminiKeyButton.IsEnabled = configured;
         AskGeminiButton.IsEnabled = configured;
-        WakeWordCheckBox.IsEnabled = configured;
+        WakeWordCheckBox.IsEnabled = configured && _voiceRecordingTask is null;
+        StartVoiceRecordingButton.IsEnabled = configured && _wakeWordTask is null && _voiceRecordingTask is null;
         if (!configured && _wakeWordTask is not null) StopWakeWordListener();
         else if (configured && _settingsLoaded && WakeWordCheckBox.IsChecked == true && _wakeWordTask is null) StartWakeWordListener();
     }
@@ -195,12 +196,20 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_wakeWordTask is not null)
+        {
+            VoiceStatusText.Text = "Disable Hey NERO listening before starting manual recording.";
+            return;
+        }
+
         try
         {
             _voiceRecordingCancellation = new CancellationTokenSource();
             _voiceRecordingTask = _microphoneRecorder.RecordWaveUntilCancelledAsync(_voiceRecordingCancellation.Token);
             StartVoiceRecordingButton.IsEnabled = false;
             StopVoiceRecordingButton.IsEnabled = true;
+            WakeWordCheckBox.IsEnabled = false;
+            MicrophoneConnectionStateText.Text = "Recording locally";
             VoiceTranscriptText.Text = string.Empty;
             VoiceStatusText.Text = "Microphone recording is active on this PC. Press Stop & send when finished.";
         }
@@ -266,8 +275,10 @@ public partial class MainWindow : Window
                 _voiceRecordingTask = null;
             }
             cancellation.Dispose();
-            StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured;
+            StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured && _wakeWordTask is null;
             StopVoiceRecordingButton.IsEnabled = false;
+            WakeWordCheckBox.IsEnabled = _geminiConfiguration.IsConfigured;
+            MicrophoneConnectionStateText.Text = _wakeWordTask is null ? "Idle — no audio captured" : "Local wake-word listening";
         }
     }
 
@@ -279,8 +290,10 @@ public partial class MainWindow : Window
         _voiceRecordingTask = null;
         if (cancellation is null) return;
 
-        StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured;
+        StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured && _wakeWordTask is null;
         StopVoiceRecordingButton.IsEnabled = false;
+        WakeWordCheckBox.IsEnabled = _geminiConfiguration.IsConfigured;
+        MicrophoneConnectionStateText.Text = _wakeWordTask is null ? "Idle — no audio captured" : "Local wake-word listening";
         VoiceStatusText.Text = "Voice recording cancelled because NERO was hidden or closed. No audio was sent.";
         cancellation.Cancel();
         if (recording is null)
@@ -317,6 +330,12 @@ public partial class MainWindow : Window
 
     private void StartWakeWordListener()
     {
+        if (_voiceRecordingTask is not null)
+        {
+            WakeWordCheckBox.IsChecked = false;
+            WakeWordStatusText.Text = "Stop manual recording before enabling Hey NERO.";
+            return;
+        }
         if (!_geminiConfiguration.IsConfigured)
         {
             WakeWordCheckBox.IsChecked = false;
@@ -328,6 +347,8 @@ public partial class MainWindow : Window
         var cancellation = new CancellationTokenSource();
         _wakeWordCancellation = cancellation;
         WakeWordStatusText.Text = "Preparing local wake-word model. First setup downloads about 40 MB.";
+        WakeWordCheckBox.IsEnabled = false;
+        StartVoiceRecordingButton.IsEnabled = false;
         _trayIcon.Text = "NERO — local wake word";
         var task = RunWakeWordLoopAsync(cancellation.Token);
         _wakeWordTask = task;
@@ -338,7 +359,11 @@ public partial class MainWindow : Window
     {
         await _wakeWordListener.PrepareAsync(cancellationToken).ConfigureAwait(false);
         await Dispatcher.InvokeAsync(() =>
-            WakeWordStatusText.Text = "Hey NERO is listening locally. Audio is not sent to the cloud until after detection.");
+        {
+            WakeWordStatusText.Text = "Hey NERO is listening locally. Audio is not sent to the cloud until after detection.";
+            MicrophoneConnectionStateText.Text = "Local wake-word listening";
+            WakeWordCheckBox.IsEnabled = true;
+        });
         await _wakeWordListener.ListenAsync(HandleWakeWordDetectedAsync, cancellationToken).ConfigureAwait(false);
     }
 
@@ -365,6 +390,9 @@ public partial class MainWindow : Window
                 _wakeWordTask = null;
                 _wakeWordCancellation = null;
                 _trayIcon.Text = "NERO";
+                StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured;
+                WakeWordCheckBox.IsEnabled = _geminiConfiguration.IsConfigured;
+                MicrophoneConnectionStateText.Text = "Idle — no audio captured";
                 cancellation.Dispose();
                 if (failure is not null)
                 {
@@ -374,6 +402,9 @@ public partial class MainWindow : Window
                 else if (wasCancelled)
                 {
                     WakeWordStatusText.Text = "Hey NERO listening is off.";
+        MicrophoneConnectionStateText.Text = "Idle — no audio captured";
+        StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured;
+        WakeWordCheckBox.IsEnabled = _geminiConfiguration.IsConfigured;
                 }
             });
         }
@@ -409,6 +440,7 @@ public partial class MainWindow : Window
         {
             ShowFromTray();
             VoiceStatusText.Text = "Hey NERO detected. Speak your command now…";
+            MicrophoneConnectionStateText.Text = "Recording command locally";
             VoiceTranscriptText.Text = string.Empty;
         });
 
@@ -417,12 +449,20 @@ public partial class MainWindow : Window
             var audio = await _microphoneRecorder.RecordCommandUntilSilenceAsync(cancellationToken).ConfigureAwait(false);
             if (audio.Length <= 44)
             {
-                await Dispatcher.InvokeAsync(() => VoiceStatusText.Text = "I heard Hey NERO but no command. Say Hey NERO and then speak after the prompt.");
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    VoiceStatusText.Text = "I heard Hey NERO but no command. Say Hey NERO and then speak after the prompt.";
+                    MicrophoneConnectionStateText.Text = "Local wake-word listening";
+                });
                 return;
             }
 
             var apiKey = _geminiConfiguration.GetApiKeyForRequest();
-            await Dispatcher.InvokeAsync(() => VoiceStatusText.Text = "Transcribing your voice command…");
+            await Dispatcher.InvokeAsync(() =>
+            {
+                VoiceStatusText.Text = "Transcribing your voice command…";
+                MicrophoneConnectionStateText.Text = "Idle — processing command";
+            });
             var transcript = await _geminiClient.TranscribeAudioAsync(apiKey, audio, cancellationToken).ConfigureAwait(false);
             await Dispatcher.InvokeAsync(() =>
             {
@@ -453,7 +493,11 @@ public partial class MainWindow : Window
                 await Dispatcher.InvokeAsync(() => SpeechStatusText.Text = $"Speech output unavailable: {speechError.Message}");
             }
 
-            await Dispatcher.InvokeAsync(() => VoiceStatusText.Text = "Ready. Say Hey NERO again.");
+            await Dispatcher.InvokeAsync(() =>
+            {
+                VoiceStatusText.Text = "Ready. Say Hey NERO again.";
+                MicrophoneConnectionStateText.Text = "Local wake-word listening";
+            });
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -461,7 +505,11 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            await Dispatcher.InvokeAsync(() => VoiceStatusText.Text = $"Voice command failed: {ex.Message}");
+            await Dispatcher.InvokeAsync(() =>
+            {
+                VoiceStatusText.Text = $"Voice command failed: {ex.Message}";
+                MicrophoneConnectionStateText.Text = "Local wake-word listening";
+            });
         }
     }
 
