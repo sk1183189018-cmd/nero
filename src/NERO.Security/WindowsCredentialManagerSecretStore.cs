@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace NERO.Security;
 
 /// <summary>Stores generic credentials in Windows Credential Manager for the current user.</summary>
-public sealed class WindowsCredentialManagerSecretStore : IDeviceSecretStore
+public sealed partial class WindowsCredentialManagerSecretStore : IDeviceSecretStore
 {
     private const uint GenericCredential = 1;
     private const uint PersistLocalMachine = 2;
