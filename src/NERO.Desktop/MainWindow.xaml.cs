@@ -450,6 +450,7 @@ public partial class MainWindow : Window
         try
         {
             var audio = await _microphoneRecorder.RecordCommandUntilSilenceAsync(cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             if (audio.Length <= 44)
             {
                 await Dispatcher.InvokeAsync(() =>
