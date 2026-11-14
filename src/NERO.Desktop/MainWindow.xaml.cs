@@ -3,6 +3,7 @@ using System.Windows;
 using Forms = System.Windows.Forms;
 using System.Windows.Controls;
 using NERO.AI;
+using NERO.Automation;
 using NERO.Core.Settings;
 using NERO.Voice;
 
@@ -16,6 +17,7 @@ public partial class MainWindow : Window
     private readonly IMicrophoneRecorder _microphoneRecorder;
     private readonly ITextToSpeech _textToSpeech;
     private readonly IWakeWordListener _wakeWordListener;
+    private readonly GeminiAgentOrchestrator _agentOrchestrator;
     private CancellationTokenSource? _wakeWordCancellation;
     private Task? _wakeWordTask;
     private bool _settingsLoaded;
@@ -25,7 +27,7 @@ public partial class MainWindow : Window
     private readonly Forms.NotifyIcon _trayIcon;
     private bool _exitRequested;
 
-    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient, IMicrophoneRecorder microphoneRecorder, ITextToSpeech textToSpeech, IWakeWordListener wakeWordListener)
+    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient, IMicrophoneRecorder microphoneRecorder, ITextToSpeech textToSpeech, IWakeWordListener wakeWordListener, GeminiAgentOrchestrator agentOrchestrator)
     {
         _settingsStore = settingsStore;
         _geminiConfiguration = geminiConfiguration;
@@ -33,6 +35,7 @@ public partial class MainWindow : Window
         _microphoneRecorder = microphoneRecorder;
         _textToSpeech = textToSpeech;
         _wakeWordListener = wakeWordListener;
+        _agentOrchestrator = agentOrchestrator;
         InitializeComponent();
         _trayIcon = CreateTrayIcon();
         Loaded += MainWindow_Loaded;
@@ -73,6 +76,7 @@ public partial class MainWindow : Window
         GeminiStatusText.Text = configured ? "Gemini key is configured. Replace or remove it below." : "Enter your Gemini API key to connect this device.";
         RemoveGeminiKeyButton.IsEnabled = configured;
         AskGeminiButton.IsEnabled = configured;
+        RunNeroActionButton.IsEnabled = configured;
         WakeWordCheckBox.IsEnabled = configured && _voiceRecordingTask is null;
         StartVoiceRecordingButton.IsEnabled = configured && _wakeWordTask is null && _voiceRecordingTask is null;
         if (!configured && _wakeWordTask is not null) StopWakeWordListener();
@@ -186,6 +190,36 @@ public partial class MainWindow : Window
         _textToSpeech.Stop();
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
+    }
+
+    private async void RunNeroAction_Click(object sender, RoutedEventArgs e)
+    {
+        var prompt = GeminiPromptTextBox.Text;
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            AgentActionStatusText.Text = "Enter a request first.";
+            return;
+        }
+
+        RunNeroActionButton.IsEnabled = false;
+        AgentActionStatusText.Text = "Planning a safe action…";
+        try
+        {
+            var result = await _agentOrchestrator.ExecuteAsync(
+                _geminiConfiguration.GetApiKeyForRequest(), prompt);
+            GeminiResponseText.Text = result.Message;
+            AgentActionStatusText.Text = result.ActionSucceeded
+                ? "Approved action completed."
+                : "No computer action was completed.";
+        }
+        catch (Exception ex)
+        {
+            AgentActionStatusText.Text = $"NERO action failed: {ex.Message}";
+        }
+        finally
+        {
+            RunNeroActionButton.IsEnabled = _geminiConfiguration.IsConfigured;
+        }
     }
 
     private void StartVoiceRecording_Click(object sender, RoutedEventArgs e)
