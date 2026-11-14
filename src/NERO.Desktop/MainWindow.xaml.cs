@@ -208,9 +208,9 @@ public partial class MainWindow : Window
             var result = await _agentOrchestrator.ExecuteAsync(
                 _geminiConfiguration.GetApiKeyForRequest(), prompt);
             GeminiResponseText.Text = result.Message;
-            AgentActionStatusText.Text = result.ActionSucceeded
-                ? "Approved action completed."
-                : "No computer action was completed.";
+            AgentActionStatusText.Text = !result.ActionRequested
+                ? "No computer action selected. Use Send to Gemini for a general question."
+                : result.ActionSucceeded ? "Approved action completed." : "Action was not completed.";
         }
         catch (Exception ex)
         {
@@ -508,10 +508,13 @@ public partial class MainWindow : Window
                 VoiceStatusText.Text = "Thinking…";
             });
 
-            var answer = await _geminiClient.GenerateTextAsync(
-                apiKey,
-                "Respond helpfully and naturally to this spoken user request. The transcript may contain Hindi, Hinglish, or English. Do not claim to have performed computer actions; just answer the request.\n\nUser said: " + transcript,
-                cancellationToken).ConfigureAwait(false);
+            var agentResult = await _agentOrchestrator.ExecuteAsync(apiKey, transcript, cancellationToken).ConfigureAwait(false);
+            var answer = agentResult.ActionRequested
+                ? agentResult.Message
+                : await _geminiClient.GenerateTextAsync(
+                    apiKey,
+                    "Respond helpfully and naturally to this spoken user request. The transcript may contain Hindi, Hinglish, or English. Do not claim to have performed computer actions; just answer the request.\n\nUser said: " + transcript,
+                    cancellationToken).ConfigureAwait(false);
             await Dispatcher.InvokeAsync(() =>
             {
                 GeminiResponseText.Text = answer;
