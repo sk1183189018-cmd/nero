@@ -229,11 +229,13 @@ public partial class MainWindow : Window
             try
             {
                 await _textToSpeech.SpeakAsync(answer);
-                VoiceStatusText.Text = "Voice request completed.";\n            }
+                VoiceStatusText.Text = "Voice request completed.";
+            }
             catch (Exception speechError)
             {
                 SpeechStatusText.Text = $"Text reply is ready, but speech output is unavailable: {speechError.Message}";
-                VoiceStatusText.Text = "Voice request completed with text response.";\n            }
+                VoiceStatusText.Text = "Voice request completed with text response.";
+            }
         }
         catch (OperationCanceledException)
         {
