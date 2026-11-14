@@ -63,6 +63,8 @@ public sealed class GeminiDeviceConfigurationTests
         }
         public Task<string> GenerateTextAsync(string apiKey, string prompt, CancellationToken cancellationToken = default) =>
             Task.FromResult("ok");
+        public Task<string> GenerateJsonAsync(string apiKey, string prompt, CancellationToken cancellationToken = default) =>
+            Task.FromResult("{\"action\":\"none\",\"arguments\":{},\"reason\":\"\",\"message\":\"No action\"}");
         public Task<string> TranscribeAudioAsync(string apiKey, ReadOnlyMemory<byte> wavAudio, string language = "auto", CancellationToken cancellationToken = default) =>
             Task.FromResult("transcript");
     }
