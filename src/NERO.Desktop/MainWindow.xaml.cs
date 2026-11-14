@@ -251,7 +251,7 @@ public partial class MainWindow : Window
             VoiceStatusText.Text = "Voice request completed. Speaking response…";
             try
             {
-                await _textToSpeech.SpeakAsync(answer);
+                await _textToSpeech.SpeakAsync(answer, SelectedSpeechLanguage);
                 VoiceStatusText.Text = "Voice request completed.";
             }
             catch (Exception speechError)
@@ -486,7 +486,7 @@ public partial class MainWindow : Window
 
             try
             {
-                await _textToSpeech.SpeakAsync(answer, cancellationToken).ConfigureAwait(false);
+                await _textToSpeech.SpeakAsync(answer, SelectedSpeechLanguage, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -530,7 +530,7 @@ public partial class MainWindow : Window
         SpeechStatusText.Text = "Speaking with an installed Windows voice…";
         try
         {
-            await _textToSpeech.SpeakAsync(response);
+            await _textToSpeech.SpeakAsync(response, SelectedSpeechLanguage);
             SpeechStatusText.Text = "Speech finished.";
         }
         catch (OperationCanceledException)
