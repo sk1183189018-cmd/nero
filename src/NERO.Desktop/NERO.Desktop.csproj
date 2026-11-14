@@ -11,6 +11,7 @@
     <ProjectReference Include="..\NERO.AI\NERO.AI.csproj" />
     <ProjectReference Include="..\NERO.Security\NERO.Security.csproj" />
     <ProjectReference Include="..\NERO.Voice\NERO.Voice.csproj" />
+    <ProjectReference Include="..\NERO.Automation\NERO.Automation.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
   </ItemGroup>
