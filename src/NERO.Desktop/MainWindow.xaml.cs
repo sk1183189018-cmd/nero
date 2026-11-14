@@ -14,17 +14,19 @@ public partial class MainWindow : Window
     private readonly GeminiDeviceConfiguration _geminiConfiguration;
     private readonly IGeminiApiClient _geminiClient;
     private readonly IMicrophoneRecorder _microphoneRecorder;
+    private readonly ITextToSpeech _textToSpeech;
     private CancellationTokenSource? _voiceRecordingCancellation;
     private Task<byte[]>? _voiceRecordingTask;
     private readonly Forms.NotifyIcon _trayIcon;
     private bool _exitRequested;
 
-    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient, IMicrophoneRecorder microphoneRecorder)
+    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient, IMicrophoneRecorder microphoneRecorder, ITextToSpeech textToSpeech)
     {
         _settingsStore = settingsStore;
         _geminiConfiguration = geminiConfiguration;
         _geminiClient = geminiClient;
         _microphoneRecorder = microphoneRecorder;
+        _textToSpeech = textToSpeech;
         InitializeComponent();
         _trayIcon = CreateTrayIcon();
         Loaded += MainWindow_Loaded;
@@ -159,6 +161,7 @@ public partial class MainWindow : Window
         if (_exitRequested) return;
         e.Cancel = true;
         CancelVoiceRecording();
+        _textToSpeech.Stop();
         Hide();
         _trayIcon.ShowBalloonTip(1800, "NERO is running", "Open NERO from the system tray.", Forms.ToolTipIcon.Info);
     }
@@ -166,6 +169,7 @@ public partial class MainWindow : Window
     public void DisposeTrayIcon()
     {
         CancelVoiceRecording();
+        _textToSpeech.Stop();
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
     }
@@ -221,7 +225,15 @@ public partial class MainWindow : Window
                 apiKey,
                 "Respond helpfully and naturally to this spoken user request. The transcript may contain Hindi, Hinglish, or English. Do not claim to have performed computer actions; just answer the request.\n\nUser said: " + transcript);
             GeminiResponseText.Text = answer;
-            VoiceStatusText.Text = "Voice request completed.";
+            VoiceStatusText.Text = "Voice request completed. Speaking response…";
+            try
+            {
+                await _textToSpeech.SpeakAsync(answer);
+                VoiceStatusText.Text = "Voice request completed.";\n            }
+            catch (Exception speechError)
+            {
+                SpeechStatusText.Text = $"Text reply is ready, but speech output is unavailable: {speechError.Message}";
+                VoiceStatusText.Text = "Voice request completed with text response.";\n            }
         }
         catch (OperationCanceledException)
         {
@@ -267,6 +279,42 @@ public partial class MainWindow : Window
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
+    }
+
+    private async void SpeakResponse_Click(object sender, RoutedEventArgs e)
+    {
+        var response = GeminiResponseText.Text;
+        if (string.IsNullOrWhiteSpace(response))
+        {
+            SpeechStatusText.Text = "There is no response to speak yet.";
+            return;
+        }
+
+        SpeakResponseButton.IsEnabled = false;
+        SpeechStatusText.Text = "Speaking with an installed Windows voice…";
+        try
+        {
+            await _textToSpeech.SpeakAsync(response);
+            SpeechStatusText.Text = "Speech finished.";
+        }
+        catch (OperationCanceledException)
+        {
+            SpeechStatusText.Text = "Speech stopped.";
+        }
+        catch (Exception ex)
+        {
+            SpeechStatusText.Text = $"Speech output unavailable: {ex.Message}";
+        }
+        finally
+        {
+            SpeakResponseButton.IsEnabled = true;
+        }
+    }
+
+    private void StopSpeaking_Click(object sender, RoutedEventArgs e)
+    {
+        _textToSpeech.Stop();
+        SpeechStatusText.Text = "Stopping speech…";
     }
 
     private void RemoveGeminiKey_Click(object sender, RoutedEventArgs e)
