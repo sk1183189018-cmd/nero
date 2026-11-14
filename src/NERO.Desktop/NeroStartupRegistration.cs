@@ -24,6 +24,6 @@ internal static class NeroStartupRegistration
 
         var executable = Environment.ProcessPath
             ?? throw new InvalidOperationException("Windows did not provide the NERO executable path.");
-        runKey.SetValue(ValueName, $"\\"{executable}\\" --startup", RegistryValueKind.String);
+        runKey.SetValue(ValueName, string.Concat("\"", executable, "\" --startup"), RegistryValueKind.String);
     }
 }
