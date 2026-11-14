@@ -14,5 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\NERO.Core\NERO.Core.csproj" />
+    <ProjectReference Include="..\..\src\NERO.AI\NERO.AI.csproj" />
+    <ProjectReference Include="..\..\src\NERO.Security\NERO.Security.csproj" />
   </ItemGroup>
 </Project>
