@@ -61,6 +61,5 @@ public sealed class WindowsTextToSpeech : ITextToSpeech
         _disposed = true;
         _synthesizer.SpeakAsyncCancelAll();
         _synthesizer.Dispose();
-        _gate.Dispose();
     }
 }
