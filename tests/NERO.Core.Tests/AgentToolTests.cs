@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NERO.Automation;
+using NERO.AI;
 using Xunit;
 
 namespace NERO.Core.Tests;
@@ -78,7 +79,7 @@ public sealed class AgentToolTests
         Assert.Throws<ArgumentException>(() => tool.BuildApprovalSummary(arguments.RootElement));
     }
 
-    private sealed class FakeApproval(bool approved) : IAgentActionApproval
+
     {
         public int RequestCount { get; private set; }
 
