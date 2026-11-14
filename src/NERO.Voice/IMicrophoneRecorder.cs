@@ -4,4 +4,5 @@ namespace NERO.Voice;
 public interface IMicrophoneRecorder
 {
     Task<byte[]> RecordWaveUntilCancelledAsync(CancellationToken cancellationToken);
+    Task<byte[]> RecordCommandUntilSilenceAsync(CancellationToken cancellationToken);
 }
