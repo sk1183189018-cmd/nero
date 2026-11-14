@@ -387,6 +387,7 @@ public partial class MainWindow : Window
             await Dispatcher.InvokeAsync(() =>
             {
                 if (!ReferenceEquals(_wakeWordTask, task)) return;
+
                 _wakeWordTask = null;
                 _wakeWordCancellation = null;
                 _trayIcon.Text = "NERO";
@@ -394,17 +395,15 @@ public partial class MainWindow : Window
                 WakeWordCheckBox.IsEnabled = _geminiConfiguration.IsConfigured;
                 MicrophoneConnectionStateText.Text = "Idle — no audio captured";
                 cancellation.Dispose();
+
                 if (failure is not null)
                 {
-                    WakeWordStatusText.Text = $"Hey NERO stopped: {failure.Message}";
                     WakeWordCheckBox.IsChecked = false;
+                    WakeWordStatusText.Text = $"Hey NERO stopped: {failure.Message}";
                 }
                 else if (wasCancelled)
                 {
                     WakeWordStatusText.Text = "Hey NERO listening is off.";
-        MicrophoneConnectionStateText.Text = "Idle — no audio captured";
-        StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured;
-        WakeWordCheckBox.IsEnabled = _geminiConfiguration.IsConfigured;
                 }
             });
         }
@@ -418,6 +417,9 @@ public partial class MainWindow : Window
         _wakeWordTask = null;
         _trayIcon.Text = "NERO";
         WakeWordStatusText.Text = "Hey NERO listening is off.";
+        MicrophoneConnectionStateText.Text = "Idle — no audio captured";
+        StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured;
+        WakeWordCheckBox.IsEnabled = _geminiConfiguration.IsConfigured;
         if (cancellation is null) return;
 
         cancellation.Cancel();
