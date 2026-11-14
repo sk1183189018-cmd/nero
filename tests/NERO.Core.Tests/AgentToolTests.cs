@@ -1,6 +1,6 @@
 using System.Text.Json;
-using NERO.Automation;
 using NERO.AI;
+using NERO.Automation;
 using Xunit;
 
 namespace NERO.Core.Tests;
@@ -12,7 +12,7 @@ public sealed class AgentToolTests
     {
         using var arguments = JsonDocument.Parse("{}");
         var tool = new FakeTool();
-        var approval = new FakeApproval(approved: false);
+        var approval = new FakeApproval(false);
         var coordinator = new ToolExecutionCoordinator(new[] { tool }, approval);
 
         var result = await coordinator.ExecuteAsync("fake_action", arguments.RootElement, "test reason");
@@ -27,7 +27,7 @@ public sealed class AgentToolTests
     {
         using var arguments = JsonDocument.Parse("{\"value\":\"hello\"}");
         var tool = new FakeTool();
-        var approval = new FakeApproval(approved: true);
+        var approval = new FakeApproval(true);
         var coordinator = new ToolExecutionCoordinator(new[] { tool }, approval);
 
         var result = await coordinator.ExecuteAsync("fake_action", arguments.RootElement, "test reason");
@@ -41,7 +41,7 @@ public sealed class AgentToolTests
     public async Task ExecuteAsync_RejectsUnknownToolWithoutApproval()
     {
         using var arguments = JsonDocument.Parse("{}");
-        var approval = new FakeApproval(approved: true);
+        var approval = new FakeApproval(true);
         var coordinator = new ToolExecutionCoordinator(Array.Empty<IAgentTool>(), approval);
 
         var result = await coordinator.ExecuteAsync("powershell", arguments.RootElement, "unsafe");
@@ -79,7 +79,24 @@ public sealed class AgentToolTests
         Assert.Throws<ArgumentException>(() => tool.BuildApprovalSummary(arguments.RootElement));
     }
 
+    [Fact]
+    public async Task GeminiAgentOrchestrator_RoutesPlannedActionThroughApprovalGate()
+    {
+        var tool = new FakeTool();
+        var approval = new FakeApproval(true);
+        var coordinator = new ToolExecutionCoordinator(new[] { tool }, approval);
+        var gemini = new FakeGeminiClient("{\"action\":\"fake_action\",\"arguments\":{\"value\":\"voice\"},\"reason\":\"Test action\",\"message\":\"\"}");
+        var orchestrator = new GeminiAgentOrchestrator(gemini, coordinator);
 
+        var result = await orchestrator.ExecuteAsync("test-key", "do the fake action");
+
+        Assert.True(result.ActionRequested);
+        Assert.True(result.ActionSucceeded);
+        Assert.Equal("voice", tool.LastValue);
+        Assert.Equal(1, approval.RequestCount);
+    }
+
+    private sealed class FakeApproval(bool approved) : IAgentActionApproval
     {
         public int RequestCount { get; private set; }
 
@@ -104,5 +121,13 @@ public sealed class AgentToolTests
             LastValue = arguments.TryGetProperty("value", out var value) ? value.GetString() : null;
             return Task.FromResult(new ToolResult(true, "Fake action ran."));
         }
+    }
+
+    private sealed class FakeGeminiClient(string plan) : IGeminiApiClient
+    {
+        public Task ValidateApiKeyAsync(string apiKey, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<string> GenerateTextAsync(string apiKey, string prompt, CancellationToken cancellationToken = default) => Task.FromResult("answer");
+        public Task<string> GenerateJsonAsync(string apiKey, string prompt, CancellationToken cancellationToken = default) => Task.FromResult(plan);
+        public Task<string> TranscribeAudioAsync(string apiKey, ReadOnlyMemory<byte> wavAudio, string language = "auto", CancellationToken cancellationToken = default) => Task.FromResult("transcript");
     }
 }
