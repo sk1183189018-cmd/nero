@@ -7,6 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\NERO.Core\NERO.Core.csproj" />
+    <ProjectReference Include="..\NERO.AI\NERO.AI.csproj" />
+    <ProjectReference Include="..\NERO.Security\NERO.Security.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
   </ItemGroup>
 </Project>
