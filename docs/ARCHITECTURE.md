@@ -1,23 +1,34 @@
 # NERO architecture
 
-## Current milestone
+## Current implementation
 
-The repository currently contains a .NET 10 WPF desktop application, a platform-neutral core assembly, Windows Credential Manager integration, a Gemini REST provider, local user preferences, a system-tray lifecycle, current-user startup registration, a test project, and Windows GitHub Actions CI. The desktop screen can validate/save/remove a per-device Gemini API key and send a text prompt to Gemini.
+The solution currently contains these real projects:
 
-## Project boundaries
+- `NERO.Desktop`: .NET 10 WPF application, dependency-injection composition root, system tray, startup registration, Gemini settings, text chat, push-to-talk, wake-word controls, and speech output.
+- `NERO.Core`: platform-neutral product metadata and persisted non-secret settings.
+- `NERO.Security`: Windows Credential Manager integration for device-local secrets.
+- `NERO.AI`: Gemini REST client, API-key validation, text generation, and audio transcription.
+- `NERO.Voice`: WASAPI microphone capture, local Vosk wake-word detection, model download/validation, and Windows SAPI text-to-speech.
+- `NERO.Core.Tests`: unit tests for core settings, Gemini behavior, and safe Vosk model extraction.
 
-- `NERO.Desktop`: Windows Presentation Foundation application and composition root.
-- `NERO.Core`: platform-neutral product primitives and contracts.
-- `NERO.Core.Tests`: automated tests for core behavior.
+## Current data flow
+
+1. Non-secret preferences are stored in the current user's LocalAppData directory.
+2. The Gemini key is validated against Google's API and stored separately in Windows Credential Manager.
+3. Text prompts are sent to Gemini over HTTPS.
+4. Push-to-talk audio is buffered in memory and uploaded only after the user presses Stop & send.
+5. If Hey NERO is enabled, Vosk processes microphone audio locally. After wake-word detection, a separate short command recording is captured and only that clip is sent to Gemini.
+6. Gemini responses can be spoken with an installed Windows SAPI voice.
 
 ## Planned boundaries
 
-AI provider integrations, voice capture, Windows automation, browser automation, document processing, secure credential storage, local persistence, licensing, update services, and backend/admin services will be introduced as real implementations in dependency order. They are intentionally not represented by empty projects at this stage.
+The next milestones will add permission-gated Windows tools, browser automation, Office/PDF document intelligence, local conversation memory, agent orchestration, account/device licensing, backend/admin services, signed updates with rollback, and a production installer. These capabilities are not claimed as implemented yet.
 
 ## Security principles
 
-- No secrets are stored in source control.
-- Microphone capture is not started by the initial shell.
-- AI-proposed actions must pass through explicit validated tools and permission checks.
-- Device-local Gemini credentials must use Windows Credential Manager when that milestone is implemented.
+- No secrets are stored in source control or ordinary settings files.
+- Gemini API keys remain in Windows Credential Manager.
+- Wake-word audio is processed locally; command audio is uploaded only after explicit wake-word opt-in and detection.
+- Push-to-talk audio is uploaded only after the user presses Stop & send.
+- AI-proposed actions must pass through explicit, validated tools and permission checks before any future computer action.
 - Production update packages must be signed and verified before installation.
