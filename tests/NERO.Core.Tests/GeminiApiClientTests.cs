@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using NERO.AI;
 using Xunit;
 
@@ -72,7 +73,7 @@ public sealed class GeminiApiClientTests
             Assert.Contains("application/json", body);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("""{"candidates":[{"content":{"parts":[{"text":"{\\"action\\":\\"none\\"}"}]}}]}""", Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(new { candidates = new[] { new { content = new { parts = new[] { new { text = "{\\\"action\\\":\\\"none\\\"}" } } } } } }), Encoding.UTF8, "application/json")
             };
         });
         using var http = new HttpClient(handler);
