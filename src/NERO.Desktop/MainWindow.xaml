@@ -1,35 +1,53 @@
 <Window x:Class="NERO.Desktop.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NERO" Height="680" Width="1040" MinHeight="600" MinWidth="820"
+        Title="NERO" Height="760" Width="1080" MinHeight="640" MinWidth="860"
         WindowStartupLocation="CenterScreen" Background="{StaticResource NeroBackground}" Foreground="#F3F5FA">
     <Grid Margin="28">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="20" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <StackPanel><TextBlock Text="NERO" FontSize="34" FontWeight="Bold" /><TextBlock Text="Your Windows AI assistant" Foreground="#AAB3C5" FontSize="14" /></StackPanel>
+        <StackPanel>
+            <TextBlock Text="NERO" FontSize="34" FontWeight="Bold" />
+            <TextBlock Text="Your Windows AI assistant" Foreground="#AAB3C5" FontSize="14" />
+        </StackPanel>
         <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="1.25*" /><ColumnDefinition Width="20" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*" /><ColumnDefinition Width="20" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <Border Grid.Column="0" Background="{StaticResource NeroPanel}" CornerRadius="16" Padding="24">
-                <StackPanel>
-                    <TextBlock Text="Desktop settings" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Margin="0,8,0,20" Text="These preferences are stored locally for your Windows account." Foreground="#AAB3C5" TextWrapping="Wrap" />
-                    <CheckBox x:Name="LaunchAtStartupCheckBox" Content="Launch NERO when I sign in" Margin="0,8" Foreground="#F3F5FA" />
-                    <CheckBox x:Name="StartMinimizedCheckBox" Content="Start minimized" Margin="0,8" Foreground="#F3F5FA" />
-                    <CheckBox x:Name="MicrophoneCheckBox" Content="Enable microphone listening (future voice feature)" Margin="0,8" Foreground="#F3F5FA" IsEnabled="False" />
-                    <TextBlock Margin="0,24,0,6" Text="Speech language preference" Foreground="#AAB3C5" />
-                    <ComboBox x:Name="SpeechLanguageComboBox" SelectedIndex="0" Width="220" HorizontalAlignment="Left">
-                        <ComboBoxItem Content="Automatic" Tag="auto" /><ComboBoxItem Content="English (India)" Tag="en-IN" /><ComboBoxItem Content="Hindi (India)" Tag="hi-IN" />
-                    </ComboBox>
-                    <Button Content="Save settings" Click="SaveSettings_Click" Margin="0,24,0,0" Padding="18,10" HorizontalAlignment="Left" />
-                    <TextBlock x:Name="SaveStatusText" Margin="0,12,0,0" Foreground="{StaticResource NeroAccent}" TextWrapping="Wrap" />
-                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="Device settings" FontSize="22" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,8,0,20" Text="Preferences are stored locally for your Windows account." Foreground="#AAB3C5" TextWrapping="Wrap" />
+                        <CheckBox x:Name="LaunchAtStartupCheckBox" Content="Launch NERO when I sign in" Margin="0,8" Foreground="#F3F5FA" />
+                        <CheckBox x:Name="StartMinimizedCheckBox" Content="Start minimized" Margin="0,8" Foreground="#F3F5FA" />
+                        <CheckBox x:Name="MicrophoneCheckBox" Content="Enable microphone listening (not available yet)" Margin="0,8" Foreground="#F3F5FA" IsEnabled="False" />
+                        <TextBlock Margin="0,20,0,6" Text="Speech language preference" Foreground="#AAB3C5" />
+                        <ComboBox x:Name="SpeechLanguageComboBox" SelectedIndex="0" Width="220" HorizontalAlignment="Left">
+                            <ComboBoxItem Content="Automatic" Tag="auto" /><ComboBoxItem Content="English (India)" Tag="en-IN" /><ComboBoxItem Content="Hindi (India)" Tag="hi-IN" />
+                        </ComboBox>
+                        <Separator Margin="0,22,0,16" />
+                        <TextBlock Text="Gemini API setup" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,6,0,12" Text="Your key is validated and saved only in this Windows device's Credential Manager. It is never stored in settings.json." Foreground="#AAB3C5" TextWrapping="Wrap" />
+                        <PasswordBox x:Name="GeminiApiKeyPasswordBox" Height="34" Padding="8" ToolTip="Paste your Google Gemini API key" />
+                        <WrapPanel Margin="0,12,0,0">
+                            <Button x:Name="SaveGeminiKeyButton" Content="Validate &amp; Save Key" Click="SaveGeminiKey_Click" Padding="14,8" Margin="0,0,8,8" />
+                            <Button x:Name="RemoveGeminiKeyButton" Content="Remove Key" Click="RemoveGeminiKey_Click" Padding="14,8" Margin="0,0,8,8" />
+                        </WrapPanel>
+                        <TextBlock x:Name="GeminiStatusText" Margin="0,6,0,0" Foreground="{StaticResource NeroAccent}" TextWrapping="Wrap" />
+                        <Button Content="Save preferences" Click="SaveSettings_Click" Margin="0,22,0,0" Padding="18,10" HorizontalAlignment="Left" />
+                        <TextBlock x:Name="SaveStatusText" Margin="0,10,0,0" Foreground="{StaticResource NeroAccent}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
             <Border Grid.Column="2" Background="{StaticResource NeroPanel}" CornerRadius="16" Padding="22">
                 <StackPanel>
                     <TextBlock Text="System status" FontSize="20" FontWeight="SemiBold" />
-                    <TextBlock Margin="0,20,0,4" Text="Desktop application" Foreground="#AAB3C5" /><TextBlock Text="Running" Foreground="{StaticResource NeroAccent}" />
-                    <TextBlock Margin="0,16,0,4" Text="Microphone" Foreground="#AAB3C5" /><TextBlock Text="Not connected — no audio captured" />
-                    <TextBlock Margin="0,16,0,4" Text="Gemini AI" Foreground="#AAB3C5" /><TextBlock Text="Not configured" />
-                    <TextBlock Margin="0,28,0,4" Text="Current milestone" Foreground="#AAB3C5" /><TextBlock Text="Desktop shell + local settings" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,20,0,4" Text="Desktop application" Foreground="#AAB3C5" />
+                    <TextBlock Text="Running" Foreground="{StaticResource NeroAccent}" />
+                    <TextBlock Margin="0,16,0,4" Text="Gemini AI" Foreground="#AAB3C5" />
+                    <TextBlock x:Name="GeminiConnectionStateText" Text="Checking device setup…" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,16,0,4" Text="Microphone" Foreground="#AAB3C5" />
+                    <TextBlock Text="Not connected — no audio captured" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,28,0,4" Text="Current milestone" Foreground="#AAB3C5" />
+                    <TextBlock Text="Secure device API setup + Gemini provider" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
         </Grid>
