@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-The repository currently contains the initial .NET 10 solution foundation: a WPF desktop entry point, a small platform-neutral core assembly, a core test project, and a Windows GitHub Actions workflow.
+The repository currently contains a .NET 10 WPF desktop application, a platform-neutral core assembly, Windows Credential Manager integration, a Gemini REST provider, local user preferences, a system-tray lifecycle, current-user startup registration, a test project, and Windows GitHub Actions CI. The desktop screen can validate/save/remove a per-device Gemini API key and send a text prompt to Gemini.
 
 ## Project boundaries
 
