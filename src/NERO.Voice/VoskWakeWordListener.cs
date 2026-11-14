@@ -1,10 +1,12 @@
 using System.Text.Json;
+using System.Runtime.Versioning;
 using NAudio.Wave;
 using Vosk;
 
 namespace NERO.Voice;
 
 /// <summary>Runs the Hey NERO phrase grammar locally; microphone audio is never sent to this service.</summary>
+[SupportedOSPlatform("windows")]
 public sealed class VoskWakeWordListener : IWakeWordListener
 {
     private const float SampleRate = 16000.0f;
