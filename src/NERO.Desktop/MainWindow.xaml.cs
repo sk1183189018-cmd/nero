@@ -85,7 +85,33 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void AskGemini_Click(object sender, RoutedEventArgs e)\n    {\n        var prompt = GeminiPromptTextBox.Text;\n        if (string.IsNullOrWhiteSpace(prompt))\n        {\n            GeminiResponseText.Text = "Enter a question first.";\n            return;\n        }\n\n        AskGeminiButton.IsEnabled = false;\n        GeminiResponseText.Text = "NERO is waiting for Gemini…";\n        try\n        {\n            var apiKey = _geminiConfiguration.GetApiKeyForRequest();\n            GeminiResponseText.Text = await _geminiClient.GenerateTextAsync(apiKey, prompt);\n        }\n        catch (Exception ex)\n        {\n            GeminiResponseText.Text = $"Gemini request failed: {ex.Message}";\n        }\n        finally\n        {\n            AskGeminiButton.IsEnabled = _geminiConfiguration.IsConfigured;\n        }\n    }\n\n    private void RemoveGeminiKey_Click(object sender, RoutedEventArgs e)
+    private async void AskGemini_Click(object sender, RoutedEventArgs e)
+    {
+        var prompt = GeminiPromptTextBox.Text;
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            GeminiResponseText.Text = "Enter a question first.";
+            return;
+        }
+
+        AskGeminiButton.IsEnabled = false;
+        GeminiResponseText.Text = "NERO is waiting for Gemini…";
+        try
+        {
+            var apiKey = _geminiConfiguration.GetApiKeyForRequest();
+            GeminiResponseText.Text = await _geminiClient.GenerateTextAsync(apiKey, prompt);
+        }
+        catch (Exception ex)
+        {
+            GeminiResponseText.Text = $"Gemini request failed: {ex.Message}";
+        }
+        finally
+        {
+            AskGeminiButton.IsEnabled = _geminiConfiguration.IsConfigured;
+        }
+    }
+
+    private void RemoveGeminiKey_Click(object sender, RoutedEventArgs e)
     {
         if (!_geminiConfiguration.IsConfigured)
         {
