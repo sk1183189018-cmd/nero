@@ -74,6 +74,25 @@ public sealed class GeminiApiClient : IGeminiApiClient
         return SendAndReadTextAsync(request, cancellationToken);
     }
 
+
+    public Task<string> GenerateJsonAsync(string apiKey, string prompt, CancellationToken cancellationToken = default)
+    {
+        ValidateKey(apiKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+
+        var endpoint = new Uri(ApiBase + "models/" + Uri.EscapeDataString(_model) + ":generateContent");
+        using var request = CreateRequest(HttpMethod.Post, endpoint, apiKey);
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(new
+            {
+                contents = new[] { new { role = "user", parts = new[] { new { text = prompt } } } },
+                generationConfig = new { responseMimeType = "application/json" }
+            }),
+            Encoding.UTF8,
+            "application/json");
+        return SendAndReadTextAsync(request, cancellationToken);
+    }
+
     private async Task<string> SendAndReadTextAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         using (request)
