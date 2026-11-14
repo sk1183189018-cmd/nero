@@ -1,14 +1,19 @@
 using System.Threading;
 using System.Windows;
+using WpfApplication = System.Windows.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NERO.AI;
+using NERO.Automation;
 using NERO.Core.Settings;
+using NERO.Security;
+using NERO.Voice;
 
 namespace NERO.Desktop;
 
-public partial class App : Application
+public partial class App : WpfApplication
 {
-    private const string MutexName = @"Local\\NERO.Desktop.SingleInstance";
+    private const string MutexName = @"Local\NERO.Desktop.SingleInstance";
     private Mutex? _mutex;
     private IHost? _host;
 
@@ -21,6 +26,23 @@ public partial class App : Application
             .ConfigureServices(services =>
             {
                 services.AddSingleton<JsonNeroUserSettingsStore>();
+                services.AddSingleton<IDeviceSecretStore, WindowsCredentialManagerSecretStore>();
+                services.AddHttpClient<IGeminiApiClient, GeminiApiClient>(client =>
+                    client.Timeout = TimeSpan.FromSeconds(45));
+                services.AddSingleton<GeminiDeviceConfiguration>();
+                services.AddSingleton<IMicrophoneRecorder, WindowsMicrophoneRecorder>();
+                services.AddSingleton<ITextToSpeech, WindowsTextToSpeech>();
+                services.AddHttpClient<IWakeWordModelManager, VoskWakeWordModelManager>(client =>
+                    client.Timeout = TimeSpan.FromMinutes(5));
+                services.AddSingleton<IWakeWordListener, VoskWakeWordListener>();
+                services.AddSingleton<IAgentActionApproval, WpfAgentActionApproval>();
+                services.AddSingleton<IAgentTool, OpenApplicationTool>();
+                services.AddSingleton<IAgentTool, OpenWebsiteTool>();
+                services.AddSingleton<IAgentTool, SearchWebTool>();
+                services.AddSingleton<IAgentTool, OpenKnownFolderTool>();
+                services.AddSingleton<IAgentTool, CreateFolderTool>();
+                services.AddSingleton<ToolExecutionCoordinator>();
+                services.AddSingleton<GeminiAgentOrchestrator>();
                 services.AddSingleton<MainWindow>();
             })
             .Build();
@@ -32,6 +54,7 @@ public partial class App : Application
 
     private async void OnExit(object sender, ExitEventArgs e)
     {
+        if (MainWindow is NERO.Desktop.MainWindow neroWindow) neroWindow.DisposeTrayIcon();
         if (_host is not null)
         {
             await _host.StopAsync(TimeSpan.FromSeconds(5));

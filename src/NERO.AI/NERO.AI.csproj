@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+  <ItemGroup><ProjectReference Include="..\NERO.Security\NERO.Security.csproj" />
+    <ProjectReference Include="..\NERO.Automation\NERO.Automation.csproj" /></ItemGroup>
+</Project>

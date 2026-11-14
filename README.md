@@ -1,26 +1,36 @@
 # NERO
 
-NERO is a Windows-first, voice-oriented AI desktop assistant built for Windows 11.
+NERO is a Windows-first AI desktop assistant for Windows 11, built with .NET 10 and WPF.
 
-## Current status — Phase 1 foundation
+## Implemented in this development branch
 
-This branch establishes the first real application foundation:
+- .NET 10 solution with WPF desktop application, dependency-injection host, and platform-neutral core.
+- System-tray icon, close-to-tray behavior, tray reopen/exit actions, single-instance protection, Windows sign-in startup registration, and start-minimized preference.
+- Local non-secret settings stored under the current user's LocalAppData folder.
+- Gemini API key validation and storage in Windows Credential Manager. Keys are sent in the x-goog-api-key header and never written to settings.json or request URLs.
+- Gemini text generation with a prompt/response panel.
+- Push-to-talk recording at 16 kHz mono PCM. Audio remains in memory and is sent to Gemini only after Stop & send.
+- Optional Hey NERO wake-word listening using the small English Vosk model. The user must explicitly enable it; wake-word detection is local and only the post-wake command clip is sent to Gemini.
+- Gemini transcription guidance for Hindi, Hinglish, and English.
+- Windows SAPI speech output using an installed voice that matches the selected language when available.
+- Gemini-planned safe Windows actions: open allow-listed apps, open HTTP/HTTPS websites, search the web, open known user folders, and create a folder on Desktop/Documents. Every action requires a confirmation dialog that defaults to No.
+- Unit tests for settings persistence, Gemini request/response behavior, safe key handling, and Vosk model archive extraction.
+- Windows GitHub Actions workflow for restore, build, and tests.
 
-- .NET 10 solution with a WPF desktop application.
-- Dependency-injection host and application lifecycle wiring.
-- A small platform-neutral core project.
-- Core unit-test project.
-- Windows GitHub Actions restore, build and test workflow.
-- Shared build settings and secret-safe `.gitignore`.
-- Initial architecture and security documentation.
+## Current limitations
 
-The dashboard is intentionally honest: microphone capture and AI provider integration are not configured or running yet.
+- The Hey NERO wake-word model is English-only. Wake-word accuracy depends on microphone quality, room noise, and accent.
+- The Vosk model is downloaded on first opt-in (about 40 MB) and uses roughly 300 MB of runtime memory according to its publisher.
+- Hindi speech output requires a compatible Hindi SAPI voice installed in Windows.
+- The action agent is intentionally limited to simple allow-listed actions; it does not run scripts or arbitrary commands.
+- Full browser automation, Office/PDF/Excel intelligence, destructive file operations, hands-free "NERO Stop", advanced multilingual wake-word models, and speaker enrollment are not implemented.
+- Production licensing, subscriptions, backend/admin dashboard, signed updater, rollback, and production installer remain future milestones.
 
 ## Requirements
 
 - .NET 10 SDK
-- Windows 10/11 for running the WPF application
-- Visual Studio 2022 with .NET desktop development workload, or the .NET CLI
+- Windows 11 for running the desktop app and its microphone/tray/credential features
+- Visual Studio 2022 with the .NET desktop development workload, or the .NET CLI
 
 ## Build and test
 
@@ -30,12 +40,13 @@ dotnet build NERO.sln --configuration Release
 dotnet test NERO.sln --configuration Release
 ```
 
-## Roadmap
+## Security and privacy
 
-Development proceeds milestone by milestone: desktop lifecycle and tray behavior, device-local Gemini credential setup, real voice pipeline, AI orchestration and permission-gated tools, Windows/browser/document agents, local memory, licensing, signed updates, backend/admin services, and production installer.
+- Never commit API keys, passwords, signing certificates, or local secrets.
+- Gemini keys are device-local Windows Credential Manager secrets.
+- Wake-word audio is processed locally. It is not sent to Gemini.
+- After the user opts into Hey NERO, only the command recorded after wake-word detection is sent to Gemini.
+- Push-to-talk audio is sent only after the user presses Stop & send.
+- AI-generated responses do not execute computer actions in this branch.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Security
-
-Never commit API keys, passwords, signing certificates, or local secrets. Gemini credentials will be device-local and stored through Windows Credential Manager when that feature is implemented. No microphone capture starts in the current foundation.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SECURITY.md](docs/SECURITY.md), and [docs/VOICE.md](docs/VOICE.md).
