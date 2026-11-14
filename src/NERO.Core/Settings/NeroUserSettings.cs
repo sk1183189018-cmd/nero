@@ -5,7 +5,6 @@ public sealed record NeroUserSettings
 {
     public bool LaunchAtStartup { get; init; }
     public bool StartMinimized { get; init; }
-    public bool MicrophoneListeningEnabled { get; init; }
     public bool WakeWordEnabled { get; init; }
     public string SpeechLanguage { get; init; } = "auto";
 }
