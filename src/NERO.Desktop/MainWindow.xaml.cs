@@ -15,18 +15,23 @@ public partial class MainWindow : Window
     private readonly IGeminiApiClient _geminiClient;
     private readonly IMicrophoneRecorder _microphoneRecorder;
     private readonly ITextToSpeech _textToSpeech;
+    private readonly IWakeWordListener _wakeWordListener;
+    private CancellationTokenSource? _wakeWordCancellation;
+    private Task? _wakeWordTask;
+    private bool _settingsLoaded;
     private CancellationTokenSource? _voiceRecordingCancellation;
     private Task<byte[]>? _voiceRecordingTask;
     private readonly Forms.NotifyIcon _trayIcon;
     private bool _exitRequested;
 
-    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient, IMicrophoneRecorder microphoneRecorder, ITextToSpeech textToSpeech)
+    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient, IMicrophoneRecorder microphoneRecorder, ITextToSpeech textToSpeech, IWakeWordListener wakeWordListener)
     {
         _settingsStore = settingsStore;
         _geminiConfiguration = geminiConfiguration;
         _geminiClient = geminiClient;
         _microphoneRecorder = microphoneRecorder;
         _textToSpeech = textToSpeech;
+        _wakeWordListener = wakeWordListener;
         InitializeComponent();
         _trayIcon = CreateTrayIcon();
         Loaded += MainWindow_Loaded;
@@ -34,12 +39,14 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        _settingsLoaded = false;
         try
         {
             var settings = await _settingsStore.LoadAsync();
             LaunchAtStartupCheckBox.IsChecked = settings.LaunchAtStartup;
             StartMinimizedCheckBox.IsChecked = settings.StartMinimized;
             MicrophoneCheckBox.IsChecked = false;
+            WakeWordCheckBox.IsChecked = settings.WakeWordEnabled;
             SpeechLanguageComboBox.SelectedIndex = settings.SpeechLanguage switch
             {
                 "en-IN" => 1,
@@ -48,7 +55,9 @@ public partial class MainWindow : Window
             };
             try { NeroStartupRegistration.SetEnabled(settings.LaunchAtStartup); }
             catch (Exception ex) { SaveStatusText.Text = $"Startup registration unavailable: {ex.Message}"; }
+            _settingsLoaded = true;
             RefreshGeminiStatus();
+            if (settings.WakeWordEnabled && _geminiConfiguration.IsConfigured) StartWakeWordListener();
             if (settings.StartMinimized) Hide();
         }
         catch (Exception ex)
@@ -64,6 +73,9 @@ public partial class MainWindow : Window
         GeminiStatusText.Text = configured ? "Gemini key is configured. Replace or remove it below." : "Enter your Gemini API key to connect this device.";
         RemoveGeminiKeyButton.IsEnabled = configured;
         AskGeminiButton.IsEnabled = configured;
+        WakeWordCheckBox.IsEnabled = configured;
+        if (!configured && _wakeWordTask is not null) StopWakeWordListener();
+        else if (configured && _settingsLoaded && WakeWordCheckBox.IsChecked == true && _wakeWordTask is null) StartWakeWordListener();
     }
 
     private async void SaveGeminiKey_Click(object sender, RoutedEventArgs e)
@@ -168,6 +180,7 @@ public partial class MainWindow : Window
 
     public void DisposeTrayIcon()
     {
+        StopWakeWordListener();
         CancelVoiceRecording();
         _textToSpeech.Stop();
         _trayIcon.Visible = false;
@@ -283,6 +296,175 @@ public partial class MainWindow : Window
             TaskScheduler.Default);
     }
 
+
+    private async void WakeWordToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_settingsLoaded) return;
+        var enabled = WakeWordCheckBox.IsChecked == true;
+        if (enabled) StartWakeWordListener();
+        else StopWakeWordListener();
+
+        try
+        {
+            var settings = await _settingsStore.LoadAsync();
+            await _settingsStore.SaveAsync(settings with { WakeWordEnabled = enabled });
+        }
+        catch (Exception ex)
+        {
+            WakeWordStatusText.Text = $"Could not save wake-word preference: {ex.Message}";
+        }
+    }
+
+    private void StartWakeWordListener()
+    {
+        if (!_geminiConfiguration.IsConfigured)
+        {
+            WakeWordCheckBox.IsChecked = false;
+            WakeWordStatusText.Text = "Configure Gemini before enabling Hey NERO.";
+            return;
+        }
+        if (_wakeWordTask is not null) return;
+
+        var cancellation = new CancellationTokenSource();
+        _wakeWordCancellation = cancellation;
+        WakeWordStatusText.Text = "Preparing local wake-word model. First setup downloads about 40 MB.";
+        _trayIcon.Text = "NERO — local wake word";
+        var task = RunWakeWordLoopAsync(cancellation.Token);
+        _wakeWordTask = task;
+        _ = ObserveWakeWordTaskAsync(task, cancellation);
+    }
+
+    private async Task RunWakeWordLoopAsync(CancellationToken cancellationToken)
+    {
+        await _wakeWordListener.PrepareAsync(cancellationToken).ConfigureAwait(false);
+        await Dispatcher.InvokeAsync(() =>
+            WakeWordStatusText.Text = "Hey NERO is listening locally. Audio is not sent to the cloud until after detection.");
+        await _wakeWordListener.ListenAsync(HandleWakeWordDetectedAsync, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task ObserveWakeWordTaskAsync(Task task, CancellationTokenSource cancellation)
+    {
+        Exception? failure = null;
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            failure = ex;
+        }
+        finally
+        {
+            var wasCancelled = cancellation.IsCancellationRequested;
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (!ReferenceEquals(_wakeWordTask, task)) return;
+                _wakeWordTask = null;
+                _wakeWordCancellation = null;
+                _trayIcon.Text = "NERO";
+                cancellation.Dispose();
+                if (failure is not null)
+                {
+                    WakeWordStatusText.Text = $"Hey NERO stopped: {failure.Message}";
+                    WakeWordCheckBox.IsChecked = false;
+                }
+                else if (wasCancelled)
+                {
+                    WakeWordStatusText.Text = "Hey NERO listening is off.";
+                }
+            });
+        }
+    }
+
+    private void StopWakeWordListener()
+    {
+        var cancellation = _wakeWordCancellation;
+        var task = _wakeWordTask;
+        _wakeWordCancellation = null;
+        _wakeWordTask = null;
+        _trayIcon.Text = "NERO";
+        WakeWordStatusText.Text = "Hey NERO listening is off.";
+        if (cancellation is null) return;
+
+        cancellation.Cancel();
+        if (task is null)
+        {
+            cancellation.Dispose();
+            return;
+        }
+
+        _ = task.ContinueWith(
+            _ => cancellation.Dispose(),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private async Task HandleWakeWordDetectedAsync(CancellationToken cancellationToken)
+    {
+        await Dispatcher.InvokeAsync(() =>
+        {
+            ShowFromTray();
+            VoiceStatusText.Text = "Hey NERO detected. Speak your command now…";
+            VoiceTranscriptText.Text = string.Empty;
+        });
+
+        try
+        {
+            var audio = await _microphoneRecorder.RecordCommandUntilSilenceAsync(cancellationToken).ConfigureAwait(false);
+            if (audio.Length <= 44)
+            {
+                await Dispatcher.InvokeAsync(() => VoiceStatusText.Text = "I heard Hey NERO but no command. Say Hey NERO and then speak after the prompt.");
+                return;
+            }
+
+            var apiKey = _geminiConfiguration.GetApiKeyForRequest();
+            await Dispatcher.InvokeAsync(() => VoiceStatusText.Text = "Transcribing your voice command…");
+            var transcript = await _geminiClient.TranscribeAudioAsync(apiKey, audio, cancellationToken).ConfigureAwait(false);
+            await Dispatcher.InvokeAsync(() =>
+            {
+                VoiceTranscriptText.Text = transcript;
+                VoiceStatusText.Text = "Thinking…";
+            });
+
+            var answer = await _geminiClient.GenerateTextAsync(
+                apiKey,
+                "Respond helpfully and naturally to this spoken user request. The transcript may contain Hindi, Hinglish, or English. Do not claim to have performed computer actions; just answer the request.\n\nUser said: " + transcript,
+                cancellationToken).ConfigureAwait(false);
+            await Dispatcher.InvokeAsync(() =>
+            {
+                GeminiResponseText.Text = answer;
+                VoiceStatusText.Text = "Speaking response…";
+            });
+
+            try
+            {
+                await _textToSpeech.SpeakAsync(answer, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception speechError)
+            {
+                await Dispatcher.InvokeAsync(() => SpeechStatusText.Text = $"Speech output unavailable: {speechError.Message}");
+            }
+
+            await Dispatcher.InvokeAsync(() => VoiceStatusText.Text = "Ready. Say Hey NERO again.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await Dispatcher.InvokeAsync(() => VoiceStatusText.Text = $"Voice command failed: {ex.Message}");
+        }
+    }
+
     private async void SpeakResponse_Click(object sender, RoutedEventArgs e)
     {
         var response = GeminiResponseText.Text;
@@ -335,6 +517,8 @@ public partial class MainWindow : Window
         if (result != System.Windows.MessageBoxResult.Yes) return;
 
         _geminiConfiguration.Remove();
+        StopWakeWordListener();
+        WakeWordCheckBox.IsChecked = false;
         GeminiApiKeyPasswordBox.Clear();
         RefreshGeminiStatus();
         GeminiStatusText.Text = "Gemini API key removed from this device.";
@@ -350,10 +534,12 @@ public partial class MainWindow : Window
                 LaunchAtStartup = LaunchAtStartupCheckBox.IsChecked == true,
                 StartMinimized = StartMinimizedCheckBox.IsChecked == true,
                 MicrophoneListeningEnabled = false,
+                WakeWordEnabled = WakeWordCheckBox.IsChecked == true,
                 SpeechLanguage = language
             };
             NeroStartupRegistration.SetEnabled(settings.LaunchAtStartup);
             await _settingsStore.SaveAsync(settings);
+            if (settings.WakeWordEnabled) StartWakeWordListener(); else StopWakeWordListener();
             SaveStatusText.Text = "Settings saved on this device.";
         }
         catch (Exception ex)
