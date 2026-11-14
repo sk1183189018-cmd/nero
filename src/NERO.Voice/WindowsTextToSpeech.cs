@@ -11,7 +11,7 @@ public sealed class WindowsTextToSpeech : ITextToSpeech
     private readonly SemaphoreSlim _gate = new(1, 1);
     private bool _disposed;
 
-    public async Task SpeakAsync(string text, CancellationToken cancellationToken = default)
+    public async Task SpeakAsync(string text, string cultureName = "auto", CancellationToken cancellationToken = default)
     {
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("Windows speech synthesis is available only on Windows.");
@@ -21,6 +21,13 @@ public sealed class WindowsTextToSpeech : ITextToSpeech
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!string.IsNullOrWhiteSpace(cultureName) && cultureName != "auto")
+            {
+                var preferredVoice = _synthesizer.GetInstalledVoices()
+                    .FirstOrDefault(voice => voice.Enabled &&
+                        string.Equals(voice.VoiceInfo.Culture.Name, cultureName, StringComparison.OrdinalIgnoreCase));
+                if (preferredVoice is not null) _synthesizer.SelectVoice(preferredVoice.VoiceInfo.Name);
+            }
             var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             EventHandler<SpeakCompletedEventArgs>? handler = null;
             handler = (_, args) =>
