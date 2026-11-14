@@ -13,6 +13,7 @@ public sealed class JsonNeroUserSettingsStoreTests
         Assert.False(settings.LaunchAtStartup);
         Assert.False(settings.StartMinimized);
         Assert.False(settings.MicrophoneListeningEnabled);
+        Assert.False(settings.WakeWordEnabled);
         Assert.Equal("auto", settings.SpeechLanguage);
     }
 
