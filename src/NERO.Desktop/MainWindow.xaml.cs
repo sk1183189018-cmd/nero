@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _wakeWordCancellation;
     private Task? _wakeWordTask;
     private bool _settingsLoaded;
+    private string SelectedSpeechLanguage => (SpeechLanguageComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "auto";
     private CancellationTokenSource? _voiceRecordingCancellation;
     private Task<byte[]>? _voiceRecordingTask;
     private readonly Forms.NotifyIcon _trayIcon;
@@ -45,7 +46,6 @@ public partial class MainWindow : Window
             var settings = await _settingsStore.LoadAsync();
             LaunchAtStartupCheckBox.IsChecked = settings.LaunchAtStartup;
             StartMinimizedCheckBox.IsChecked = settings.StartMinimized;
-            MicrophoneCheckBox.IsChecked = false;
             WakeWordCheckBox.IsChecked = settings.WakeWordEnabled;
             SpeechLanguageComboBox.SelectedIndex = settings.SpeechLanguage switch
             {
@@ -241,7 +241,7 @@ public partial class MainWindow : Window
 
             VoiceStatusText.Text = "Sending this recording to Gemini for transcription…";
             var apiKey = _geminiConfiguration.GetApiKeyForRequest();
-            var transcript = await _geminiClient.TranscribeAudioAsync(apiKey, audio);
+            var transcript = await _geminiClient.TranscribeAudioAsync(apiKey, audio, SelectedSpeechLanguage);
             VoiceTranscriptText.Text = transcript;
             VoiceStatusText.Text = "Transcript received. Asking Gemini for a response…";
             var answer = await _geminiClient.GenerateTextAsync(
@@ -467,7 +467,7 @@ public partial class MainWindow : Window
                 VoiceStatusText.Text = "Transcribing your voice command…";
                 MicrophoneConnectionStateText.Text = "Idle — processing command";
             });
-            var transcript = await _geminiClient.TranscribeAudioAsync(apiKey, audio, cancellationToken).ConfigureAwait(false);
+            var transcript = await _geminiClient.TranscribeAudioAsync(apiKey, audio, SelectedSpeechLanguage, cancellationToken).ConfigureAwait(false);
             await Dispatcher.InvokeAsync(() =>
             {
                 VoiceTranscriptText.Text = transcript;
@@ -585,7 +585,6 @@ public partial class MainWindow : Window
             {
                 LaunchAtStartup = LaunchAtStartupCheckBox.IsChecked == true,
                 StartMinimized = StartMinimizedCheckBox.IsChecked == true,
-                MicrophoneListeningEnabled = false,
                 WakeWordEnabled = WakeWordCheckBox.IsChecked == true,
                 SpeechLanguage = language
             };
