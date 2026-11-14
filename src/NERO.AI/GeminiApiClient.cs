@@ -46,6 +46,7 @@ public sealed class GeminiApiClient : IGeminiApiClient
     public Task<string> TranscribeAudioAsync(
         string apiKey,
         ReadOnlyMemory<byte> wavAudio,
+        string language = "auto",
         CancellationToken cancellationToken = default)
     {
         ValidateKey(apiKey);
@@ -53,7 +54,12 @@ public sealed class GeminiApiClient : IGeminiApiClient
         if (wavAudio.Length > MaximumInlineAudioBytes)
             throw new ArgumentException("The WAV recording is larger than the 12 MiB upload limit.", nameof(wavAudio));
 
-        const string instruction = "Transcribe the attached speech accurately. The speaker may use Hindi, Hinglish, or English and may switch languages mid-sentence. Preserve the original words and language; return only the transcript without commentary.";
+        var instruction = language switch
+        {
+            "hi-IN" => "Transcribe the attached speech accurately. The speaker prefers Hindi and Hinglish and may switch languages mid-sentence. Use Devanagari for Hindi words and Latin script for English words. Return only the transcript.",
+            "en-IN" => "Transcribe the attached speech accurately in Indian English, preserving any Hindi or Hinglish words as spoken. Return only the transcript.",
+            _ => "Transcribe the attached speech accurately. The speaker may use Hindi, Hinglish, or English and may switch languages mid-sentence. Preserve the original words and language; return only the transcript without commentary."
+        };
         var parts = new object[]
         {
             new { text = instruction },
