@@ -4,6 +4,7 @@ using WpfApplication = System.Windows.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NERO.AI;
+using NERO.Automation;
 using NERO.Core.Settings;
 using NERO.Security;
 using NERO.Voice;
@@ -34,6 +35,14 @@ public partial class App : WpfApplication
                 services.AddHttpClient<IWakeWordModelManager, VoskWakeWordModelManager>(client =>
                     client.Timeout = TimeSpan.FromMinutes(5));
                 services.AddSingleton<IWakeWordListener, VoskWakeWordListener>();
+                services.AddSingleton<IAgentActionApproval, WpfAgentActionApproval>();
+                services.AddSingleton<IAgentTool, OpenApplicationTool>();
+                services.AddSingleton<IAgentTool, OpenWebsiteTool>();
+                services.AddSingleton<IAgentTool, SearchWebTool>();
+                services.AddSingleton<IAgentTool, OpenKnownFolderTool>();
+                services.AddSingleton<IAgentTool, CreateFolderTool>();
+                services.AddSingleton<ToolExecutionCoordinator>();
+                services.AddSingleton<GeminiAgentOrchestrator>();
                 services.AddSingleton<MainWindow>();
             })
             .Build();
