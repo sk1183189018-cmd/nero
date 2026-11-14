@@ -18,7 +18,6 @@
                         <TextBlock Margin="0,8,0,20" Text="Preferences are stored locally for your Windows account." Foreground="#AAB3C5" TextWrapping="Wrap" />
                         <CheckBox x:Name="LaunchAtStartupCheckBox" Content="Launch NERO when I sign in" Margin="0,8" Foreground="#F3F5FA" />
                         <CheckBox x:Name="StartMinimizedCheckBox" Content="Start minimized" Margin="0,8" Foreground="#F3F5FA" />
-                        <CheckBox x:Name="MicrophoneCheckBox" Content="Enable microphone listening (manual voice input)" Margin="0,8" Foreground="#F3F5FA" IsEnabled="False" />
                         <CheckBox x:Name="WakeWordCheckBox" Content="Enable Hey NERO wake word (local listening)" Margin="0,8" Foreground="#F3F5FA" Checked="WakeWordToggle_Changed" Unchecked="WakeWordToggle_Changed" />
                         <TextBlock x:Name="WakeWordStatusText" Margin="0,4,0,0" Foreground="#AAB3C5" TextWrapping="Wrap" Text="Off. When enabled, wake-word detection runs locally; only the command after Hey NERO is sent to Gemini." />
                         <TextBlock Margin="0,20,0,6" Text="Speech language preference" Foreground="#AAB3C5" />
