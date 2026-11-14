@@ -12,7 +12,7 @@ The desktop screen includes a basic prompt panel that sends a user-entered promp
 
 The application now has a device-local Gemini setup flow. A user can enter a key, validate it with Google's Gemini API, save it to Windows Credential Manager, replace it, or remove it. The secret is sent in the `x-goog-api-key` HTTP header and is not stored in `settings.json`.
 
-A user-triggered push-to-talk recording flow is also available: audio is buffered locally and sent once to Gemini only after the user clicks Stop & send. Background wake-word detection is not yet implemented. Spoken responses use an installed Windows SAPI voice when available.
+A user-triggered push-to-talk recording flow is also available: audio is buffered locally and sent once to Gemini only after the user clicks Stop & send. Opt-in Hey NERO detection now runs locally with the small English Vosk model; only the command after the wake phrase is sent to Gemini. Spoken responses use an installed Windows SAPI voice when available.
 
 ## Current status — Phase 1 foundation
 
