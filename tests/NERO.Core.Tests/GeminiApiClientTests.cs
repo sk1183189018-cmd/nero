@@ -18,7 +18,7 @@ public sealed class GeminiApiClientTests
 
         Assert.DoesNotContain("test-secret", handler.RequestUri!.ToString());
         Assert.Equal("test-secret", handler.ApiKeyHeader);
-        Assert.EndsWith("/models?pageSize=1", handler.RequestUri!.PathAndQuery);
+        Assert.EndsWith("/models/gemini-3.8-flash", handler.RequestUri!.PathAndQuery);
     }
 
     [Fact]
