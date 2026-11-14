@@ -229,6 +229,7 @@ public partial class MainWindow : Window
         StopVoiceRecordingButton.IsEnabled = false;
         VoiceStatusText.Text = "Stopping microphone and preparing the recording…";
         cancellation.Cancel();
+        MicrophoneConnectionStateText.Text = "Idle — processing command";
         try
         {
             var audio = await recording;
@@ -347,7 +348,7 @@ public partial class MainWindow : Window
         var cancellation = new CancellationTokenSource();
         _wakeWordCancellation = cancellation;
         WakeWordStatusText.Text = "Preparing local wake-word model. First setup downloads about 40 MB.";
-        WakeWordCheckBox.IsEnabled = false;
+        WakeWordCheckBox.IsEnabled = _geminiConfiguration.IsConfigured;
         StartVoiceRecordingButton.IsEnabled = false;
         _trayIcon.Text = "NERO — local wake word";
         var task = RunWakeWordLoopAsync(cancellation.Token);
