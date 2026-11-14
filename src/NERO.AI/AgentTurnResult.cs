@@ -1,3 +1,3 @@
 namespace NERO.AI;
 
-public sealed record AgentTurnResult(bool ActionSucceeded, string Message);
+public sealed record AgentTurnResult(bool ActionRequested, bool ActionSucceeded, string Message);
