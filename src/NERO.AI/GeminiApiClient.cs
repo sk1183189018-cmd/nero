@@ -9,7 +9,7 @@ namespace NERO.AI;
 public sealed class GeminiApiClient : IGeminiApiClient
 {
     private const string ApiBase = "https://generativelanguage.googleapis.com/v1beta/";
-    private const string DefaultModel = "gemini-2.5-flash";
+    private const string DefaultModel = "gemini-3.8-flash";
     private const int MaximumInlineAudioBytes = 12 * 1024 * 1024;
     private readonly HttpClient _httpClient;
     private readonly string _model;
@@ -23,7 +23,7 @@ public sealed class GeminiApiClient : IGeminiApiClient
     public async Task ValidateApiKeyAsync(string apiKey, CancellationToken cancellationToken = default)
     {
         ValidateKey(apiKey);
-        using var request = CreateRequest(HttpMethod.Get, new Uri(ApiBase + "models?pageSize=1"), apiKey);
+        using var request = CreateRequest(HttpMethod.Get, new Uri(ApiBase + "models/" + Uri.EscapeDataString(_model)), apiKey);
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
         await EnsureSuccessAsync(response).ConfigureAwait(false);
