@@ -65,12 +65,12 @@
                     <TextBlock Margin="0,16,0,4" Text="Gemini AI" Foreground="#AAB3C5" />
                     <TextBlock x:Name="GeminiConnectionStateText" Text="Checking device setup…" TextWrapping="Wrap" />
                     <TextBlock Margin="0,16,0,4" Text="Microphone" Foreground="#AAB3C5" />
-                    <TextBlock Text="Not connected — no audio captured" TextWrapping="Wrap" />
+                    <TextBlock x:Name="MicrophoneConnectionStateText" Text="Idle — no audio captured" TextWrapping="Wrap" />
                     <TextBlock Margin="0,28,0,4" Text="Current milestone" Foreground="#AAB3C5" />
                     <TextBlock Text="Secure device API setup + Gemini provider" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
         </Grid>
-        <TextBlock Grid.Row="3" Margin="0,16,0,0" Foreground="#7F899D" Text="Privacy: microphone capture is not implemented or running in this build." />
+        <TextBlock Grid.Row="3" Margin="0,16,0,0" Foreground="#7F899D" Text="Privacy: microphone is idle unless you start recording or enable local Hey NERO listening." />
     </Grid>
 </Window>
