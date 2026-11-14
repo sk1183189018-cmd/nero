@@ -40,8 +40,9 @@ public partial class MainWindow : Window
                 _ => 0
             };
             try { NeroStartupRegistration.SetEnabled(settings.LaunchAtStartup); }
-            catch (Exception ex) { SaveStatusText.Text = $\"Startup registration unavailable: {ex.Message}\"; }
+            catch (Exception ex) { SaveStatusText.Text = $"Startup registration unavailable: {ex.Message}"; }
             RefreshGeminiStatus();
+            if (settings.StartMinimized) Hide();
         }
         catch (Exception ex)
         {
@@ -145,7 +146,6 @@ public partial class MainWindow : Window
     private void ExitFromTray()
     {
         _exitRequested = true;
-        DisposeTrayIcon();
         Application.Current.Shutdown();
     }
 
