@@ -1,4 +1,5 @@
 using NERO.Core;
+using Xunit;
 
 namespace NERO.Core.Tests;
 
