@@ -1,0 +1,25 @@
+name: NERO CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore NERO.sln
+      - name: Build
+        run: dotnet build NERO.sln --configuration Release --no-restore
+      - name: Test
+        run: dotnet test NERO.sln --configuration Release --no-build --logger "trx;LogFileName=nero-tests.trx"
