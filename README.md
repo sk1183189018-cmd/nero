@@ -13,6 +13,7 @@ NERO is a Windows-first AI desktop assistant for Windows 11, built with .NET 10 
 - Optional Hey NERO wake-word listening using the small English Vosk model. The user must explicitly enable it; wake-word detection is local and only the post-wake command clip is sent to Gemini.
 - Gemini transcription guidance for Hindi, Hinglish, and English.
 - Windows SAPI speech output using an installed voice that matches the selected language when available.
+- Gemini-planned safe Windows actions: open allow-listed apps, open HTTP/HTTPS websites, search the web, open known user folders, and create a folder on Desktop/Documents. Every action requires a confirmation dialog that defaults to No.
 - Unit tests for settings persistence, Gemini request/response behavior, safe key handling, and Vosk model archive extraction.
 - Windows GitHub Actions workflow for restore, build, and tests.
 
@@ -21,8 +22,8 @@ NERO is a Windows-first AI desktop assistant for Windows 11, built with .NET 10 
 - The Hey NERO wake-word model is English-only. Wake-word accuracy depends on microphone quality, room noise, and accent.
 - The Vosk model is downloaded on first opt-in (about 40 MB) and uses roughly 300 MB of runtime memory according to its publisher.
 - Hindi speech output requires a compatible Hindi SAPI voice installed in Windows.
-- Voice requests currently receive answers; they do not yet execute Windows, browser, or Office actions.
-- Hands-free "NERO Stop", advanced multilingual wake-word models, and speaker enrollment are not implemented.
+- The action agent is intentionally limited to simple allow-listed actions; it does not run scripts or arbitrary commands.
+- Full browser automation, Office/PDF/Excel intelligence, destructive file operations, hands-free "NERO Stop", advanced multilingual wake-word models, and speaker enrollment are not implemented.
 - Production licensing, subscriptions, backend/admin dashboard, signed updater, rollback, and production installer remain future milestones.
 
 ## Requirements
