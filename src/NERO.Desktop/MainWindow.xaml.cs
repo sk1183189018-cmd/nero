@@ -252,6 +252,9 @@ public partial class MainWindow : Window
         _voiceRecordingTask = null;
         if (cancellation is null) return;
 
+        StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured;
+        StopVoiceRecordingButton.IsEnabled = false;
+        VoiceStatusText.Text = "Voice recording cancelled because NERO was hidden or closed. No audio was sent.";
         cancellation.Cancel();
         if (recording is null)
         {
