@@ -4,6 +4,7 @@ using Forms = System.Windows.Forms;
 using System.Windows.Controls;
 using NERO.AI;
 using NERO.Core.Settings;
+using NERO.Voice;
 
 namespace NERO.Desktop;
 
@@ -12,14 +13,18 @@ public partial class MainWindow : Window
     private readonly JsonNeroUserSettingsStore _settingsStore;
     private readonly GeminiDeviceConfiguration _geminiConfiguration;
     private readonly IGeminiApiClient _geminiClient;
+    private readonly IMicrophoneRecorder _microphoneRecorder;
+    private CancellationTokenSource? _voiceRecordingCancellation;
+    private Task<byte[]>? _voiceRecordingTask;
     private readonly Forms.NotifyIcon _trayIcon;
     private bool _exitRequested;
 
-    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient)
+    public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient, IMicrophoneRecorder microphoneRecorder)
     {
         _settingsStore = settingsStore;
         _geminiConfiguration = geminiConfiguration;
         _geminiClient = geminiClient;
+        _microphoneRecorder = microphoneRecorder;
         InitializeComponent();
         _trayIcon = CreateTrayIcon();
         Loaded += MainWindow_Loaded;
@@ -153,14 +158,112 @@ public partial class MainWindow : Window
     {
         if (_exitRequested) return;
         e.Cancel = true;
+        CancelVoiceRecording();
         Hide();
         _trayIcon.ShowBalloonTip(1800, "NERO is running", "Open NERO from the system tray.", Forms.ToolTipIcon.Info);
     }
 
     public void DisposeTrayIcon()
     {
+        CancelVoiceRecording();
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
+    }
+
+    private void StartVoiceRecording_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_geminiConfiguration.IsConfigured)
+        {
+            VoiceStatusText.Text = "Set up your Gemini API key before using voice input.";
+            return;
+        }
+
+        try
+        {
+            _voiceRecordingCancellation = new CancellationTokenSource();
+            _voiceRecordingTask = _microphoneRecorder.RecordWaveUntilCancelledAsync(_voiceRecordingCancellation.Token);
+            StartVoiceRecordingButton.IsEnabled = false;
+            StopVoiceRecordingButton.IsEnabled = true;
+            VoiceTranscriptText.Text = string.Empty;
+            VoiceStatusText.Text = "Microphone recording is active on this PC. Press Stop & send when finished.";
+        }
+        catch (Exception ex)
+        {
+            CancelVoiceRecording();
+            VoiceStatusText.Text = $"Could not start microphone: {ex.Message}";
+        }
+    }
+
+    private async void StopVoiceRecording_Click(object sender, RoutedEventArgs e)
+    {
+        var cancellation = _voiceRecordingCancellation;
+        var recording = _voiceRecordingTask;
+        if (cancellation is null || recording is null) return;
+
+        StopVoiceRecordingButton.IsEnabled = false;
+        VoiceStatusText.Text = "Stopping microphone and preparing the recording…";
+        cancellation.Cancel();
+        try
+        {
+            var audio = await recording;
+            if (audio.Length <= 44)
+            {
+                VoiceStatusText.Text = "No usable audio was recorded.";
+                return;
+            }
+
+            VoiceStatusText.Text = "Sending this recording to Gemini for transcription…";
+            var apiKey = _geminiConfiguration.GetApiKeyForRequest();
+            var transcript = await _geminiClient.TranscribeAudioAsync(apiKey, audio);
+            VoiceTranscriptText.Text = transcript;
+            VoiceStatusText.Text = "Transcript received. Asking Gemini for a response…";
+            var answer = await _geminiClient.GenerateTextAsync(
+                apiKey,
+                "Respond helpfully and naturally to this spoken user request. The transcript may contain Hindi, Hinglish, or English. Do not claim to have performed computer actions; just answer the request.\n\nUser said: " + transcript);
+            GeminiResponseText.Text = answer;
+            VoiceStatusText.Text = "Voice request completed.";
+        }
+        catch (OperationCanceledException)
+        {
+            VoiceStatusText.Text = "Voice recording was cancelled. No audio was sent.";
+        }
+        catch (Exception ex)
+        {
+            VoiceStatusText.Text = $"Voice request failed: {ex.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(_voiceRecordingCancellation, cancellation))
+            {
+                _voiceRecordingCancellation = null;
+                _voiceRecordingTask = null;
+            }
+            cancellation.Dispose();
+            StartVoiceRecordingButton.IsEnabled = _geminiConfiguration.IsConfigured;
+            StopVoiceRecordingButton.IsEnabled = false;
+        }
+    }
+
+    private void CancelVoiceRecording()
+    {
+        var cancellation = _voiceRecordingCancellation;
+        var recording = _voiceRecordingTask;
+        _voiceRecordingCancellation = null;
+        _voiceRecordingTask = null;
+        if (cancellation is null) return;
+
+        cancellation.Cancel();
+        if (recording is null)
+        {
+            cancellation.Dispose();
+            return;
+        }
+
+        _ = recording.ContinueWith(
+            _ => cancellation.Dispose(),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private void RemoveGeminiKey_Click(object sender, RoutedEventArgs e)
