@@ -2,13 +2,15 @@ using System.Threading;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NERO.AI;
 using NERO.Core.Settings;
+using NERO.Security;
 
 namespace NERO.Desktop;
 
 public partial class App : Application
 {
-    private const string MutexName = @"Local\\NERO.Desktop.SingleInstance";
+    private const string MutexName = @"Local\NERO.Desktop.SingleInstance";
     private Mutex? _mutex;
     private IHost? _host;
 
@@ -21,6 +23,10 @@ public partial class App : Application
             .ConfigureServices(services =>
             {
                 services.AddSingleton<JsonNeroUserSettingsStore>();
+                services.AddSingleton<IDeviceSecretStore, WindowsCredentialManagerSecretStore>();
+                services.AddHttpClient<IGeminiApiClient, GeminiApiClient>(client =>
+                    client.Timeout = TimeSpan.FromSeconds(45));
+                services.AddSingleton<GeminiDeviceConfiguration>();
                 services.AddSingleton<MainWindow>();
             })
             .Build();
