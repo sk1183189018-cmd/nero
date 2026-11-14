@@ -146,7 +146,7 @@ public partial class MainWindow : Window
     private void ExitFromTray()
     {
         _exitRequested = true;
-        Application.Current.Shutdown();
+        System.Windows.Application.Current.Shutdown();
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)
@@ -171,12 +171,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        var result = MessageBox.Show(
+        var result = System.Windows.MessageBox.Show(
             "Remove the Gemini API key saved on this Windows device?",
             "Remove Gemini key",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-        if (result != MessageBoxResult.Yes) return;
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning);
+        if (result != System.Windows.MessageBoxResult.Yes) return;
 
         _geminiConfiguration.Remove();
         GeminiApiKeyPasswordBox.Clear();
