@@ -45,6 +45,11 @@
                         </WrapPanel>
                         <TextBlock x:Name="VoiceStatusText" Margin="0,4,0,0" Foreground="{StaticResource NeroAccent}" TextWrapping="Wrap" />
                         <TextBlock x:Name="VoiceTranscriptText" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#E4E8F0" />
+                        <WrapPanel Margin="0,12,0,0">
+                            <Button x:Name="SpeakResponseButton" Content="Speak response" Click="SpeakResponse_Click" Padding="14,8" Margin="0,0,8,8" />
+                            <Button x:Name="StopSpeakingButton" Content="Stop speaking" Click="StopSpeaking_Click" Padding="14,8" Margin="0,0,8,8" />
+                        </WrapPanel>
+                        <TextBlock x:Name="SpeechStatusText" Margin="0,4,0,0" Foreground="{StaticResource NeroAccent}" TextWrapping="Wrap" />
                         <Button Content="Save preferences" Click="SaveSettings_Click" Margin="0,22,0,0" Padding="18,10" HorizontalAlignment="Left" />
                         <TextBlock x:Name="SaveStatusText" Margin="0,10,0,0" Foreground="{StaticResource NeroAccent}" TextWrapping="Wrap" />
                     </StackPanel>
