@@ -34,7 +34,7 @@ public sealed class GeminiAgentOrchestrator
             if (root.ValueKind != JsonValueKind.Object ||
                 !root.TryGetProperty("action", out var actionElement) ||
                 actionElement.ValueKind != JsonValueKind.String)
-                return new AgentTurnResult(false, "NERO could not understand the requested action plan.");
+                return new AgentTurnResult(false, false, "NERO could not understand the requested action plan.");
 
             var action = actionElement.GetString()?.Trim();
             var message = root.TryGetProperty("message", out var messageElement) &&
@@ -43,12 +43,12 @@ public sealed class GeminiAgentOrchestrator
                 : string.Empty;
 
             if (string.Equals(action, "none", StringComparison.OrdinalIgnoreCase))
-                return new AgentTurnResult(false, string.IsNullOrWhiteSpace(message)
+                return new AgentTurnResult(false, false, string.IsNullOrWhiteSpace(message)
                     ? "I can answer that in chat, but I do not have a safe computer action for it."
                     : message);
 
             if (!root.TryGetProperty("arguments", out var arguments) || arguments.ValueKind != JsonValueKind.Object)
-                return new AgentTurnResult(false, "The action plan did not contain valid arguments.");
+                return new AgentTurnResult(false, false, "The action plan did not contain valid arguments.");
 
             var reason = root.TryGetProperty("reason", out var reasonElement) &&
                          reasonElement.ValueKind == JsonValueKind.String
@@ -57,11 +57,11 @@ public sealed class GeminiAgentOrchestrator
 
             var result = await _tools.ExecuteAsync(action ?? string.Empty, arguments, reason, cancellationToken)
                 .ConfigureAwait(false);
-            return new AgentTurnResult(result.Succeeded, result.Message);
+            return new AgentTurnResult(true, result.Succeeded, result.Message);
         }
         catch (JsonException)
         {
-            return new AgentTurnResult(false, "Gemini returned an invalid action plan. No computer action was performed.");
+            return new AgentTurnResult(false, false, "Gemini returned an invalid action plan. No computer action was performed.");
         }
     }
 
