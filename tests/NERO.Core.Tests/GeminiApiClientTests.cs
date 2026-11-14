@@ -67,13 +67,18 @@ public sealed class GeminiApiClientTests
     [Fact]
     public async Task GenerateJsonAsync_RequestsJsonMimeType()
     {
+        var plannedAction = JsonSerializer.Serialize(new { action = "none" });
+        var responseBody = JsonSerializer.Serialize(new
+        {
+            candidates = new[] { new { content = new { parts = new[] { new { text = plannedAction } } } } }
+        });
         using var handler = new RecordingHandler(request =>
         {
             var body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
-            Assert.Contains("application/json", body);
+            Assert.Contains("responseMimeType", body);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(JsonSerializer.Serialize(new { candidates = new[] { new { content = new { parts = new[] { new { text = "{\\\"action\\\":\\\"none\\\"}" } } } } } }), Encoding.UTF8, "application/json")
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
             };
         });
         using var http = new HttpClient(handler);
