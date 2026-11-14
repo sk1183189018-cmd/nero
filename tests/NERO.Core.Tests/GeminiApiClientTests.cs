@@ -46,6 +46,7 @@ public sealed class GeminiApiClientTests
             var body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
             Assert.Contains("audio/wav", body);
             Assert.Contains("AQIDBA==", body);
+            Assert.Contains("Devanagari", body);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("""{"candidates":[{"content":{"parts":[{"text":"Chrome kholo"}]}}]}""", Encoding.UTF8, "application/json")
@@ -54,11 +55,33 @@ public sealed class GeminiApiClientTests
         using var http = new HttpClient(handler);
         var client = new GeminiApiClient(http);
 
-        var transcript = await client.TranscribeAudioAsync("voice-secret", new byte[] { 1, 2, 3, 4 });
+        var transcript = await client.TranscribeAudioAsync("voice-secret", new byte[] { 1, 2, 3, 4 }, "hi-IN");
 
         Assert.Equal("Chrome kholo", transcript);
         Assert.Equal("voice-secret", handler.ApiKeyHeader);
         Assert.DoesNotContain("voice-secret", handler.RequestUri!.ToString());
+    }
+
+
+    [Fact]
+    public async Task GenerateJsonAsync_RequestsJsonMimeType()
+    {
+        using var handler = new RecordingHandler(request =>
+        {
+            var body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            Assert.Contains("application/json", body);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"candidates":[{"content":{"parts":[{"text":"{\\"action\\":\\"none\\"}"}]}}]}""", Encoding.UTF8, "application/json")
+            };
+        });
+        using var http = new HttpClient(handler);
+        var client = new GeminiApiClient(http);
+
+        var result = await client.GenerateJsonAsync("secret", "Plan a safe action");
+
+        Assert.Contains("\"action\"", result);
+        Assert.Equal("secret", handler.ApiKeyHeader);
     }
 
     [Fact]
