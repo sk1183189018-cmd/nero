@@ -18,7 +18,9 @@ public sealed class WindowsMicrophoneRecorder : IMicrophoneRecorder
             throw new PlatformNotSupportedException("Microphone recording is supported only on Windows.");
         cancellationToken.ThrowIfCancellationRequested();
 
-        await using var recorder = new WasapiRecorderBuilder().Build();
+        await using var recorder = new WasapiRecorderBuilder()
+            .WithFormat(new WaveFormat(16000, 16, 1))
+            .Build();
         using var output = new MemoryStream();
 
         using (var writer = new WaveFileWriter(output, recorder.WaveFormat))
