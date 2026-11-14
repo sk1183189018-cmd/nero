@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using NERO.AI;
 using NERO.Core.Settings;
 using NERO.Security;
+using NERO.Voice;
 
 namespace NERO.Desktop;
 
@@ -28,6 +29,7 @@ public partial class App : WpfApplication
                 services.AddHttpClient<IGeminiApiClient, GeminiApiClient>(client =>
                     client.Timeout = TimeSpan.FromSeconds(45));
                 services.AddSingleton<GeminiDeviceConfiguration>();
+                services.AddSingleton<IMicrophoneRecorder, WindowsMicrophoneRecorder>();
                 services.AddSingleton<MainWindow>();
             })
             .Build();
