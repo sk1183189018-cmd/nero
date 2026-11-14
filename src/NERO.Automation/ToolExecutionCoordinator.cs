@@ -18,6 +18,7 @@ public sealed class ToolExecutionCoordinator
     public async Task<ToolResult> ExecuteAsync(
         string name,
         JsonElement arguments,
+        string reason,
         CancellationToken cancellationToken = default)
     {
         if (!_tools.TryGetValue(name, out var tool))
@@ -28,12 +29,14 @@ public sealed class ToolExecutionCoordinator
         {
             summary = tool.BuildApprovalSummary(arguments);
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or DirectoryNotFoundException)
         {
             return new ToolResult(false, ex.Message);
         }
 
-        var approved = await _approval.ConfirmAsync(summary, cancellationToken).ConfigureAwait(false);
+        var safeReason = string.IsNullOrWhiteSpace(reason) ? "NERO selected this action based on your request." : reason.Trim();
+        if (safeReason.Length > 400) safeReason = safeReason[..400];
+        var approved = await _approval.ConfirmAsync($"{summary}\\n\\nReason: {safeReason}", cancellationToken).ConfigureAwait(false);
         if (!approved) return new ToolResult(false, "Action cancelled. No change was made.");
 
         try
