@@ -10,6 +10,7 @@ public sealed class GeminiApiClient : IGeminiApiClient
 {
     private const string ApiBase = "https://generativelanguage.googleapis.com/v1beta/";
     private const string DefaultModel = "gemini-2.5-flash";
+    private const int MaximumInlineAudioBytes = 12 * 1024 * 1024;
     private readonly HttpClient _httpClient;
     private readonly string _model;
 
@@ -28,38 +29,72 @@ public sealed class GeminiApiClient : IGeminiApiClient
         await EnsureSuccessAsync(response).ConfigureAwait(false);
     }
 
-    public async Task<string> GenerateTextAsync(string apiKey, string prompt, CancellationToken cancellationToken = default)
+    public Task<string> GenerateTextAsync(string apiKey, string prompt, CancellationToken cancellationToken = default)
     {
         ValidateKey(apiKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
         var endpoint = new Uri(ApiBase + "models/" + Uri.EscapeDataString(_model) + ":generateContent");
-        using var request = CreateRequest(HttpMethod.Post, endpoint, apiKey);
+        var request = CreateRequest(HttpMethod.Post, endpoint, apiKey);
         request.Content = new StringContent(
             JsonSerializer.Serialize(new { contents = new[] { new { role = "user", parts = new[] { new { text = prompt } } } } }),
             Encoding.UTF8,
             "application/json");
+        return SendAndReadTextAsync(request, cancellationToken);
+    }
 
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .ConfigureAwait(false);
-        await EnsureSuccessAsync(response).ConfigureAwait(false);
+    public Task<string> TranscribeAudioAsync(
+        string apiKey,
+        ReadOnlyMemory<byte> wavAudio,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateKey(apiKey);
+        if (wavAudio.IsEmpty) throw new ArgumentException("The WAV recording is empty.", nameof(wavAudio));
+        if (wavAudio.Length > MaximumInlineAudioBytes)
+            throw new ArgumentException("The WAV recording is larger than the 12 MiB upload limit.", nameof(wavAudio));
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (document.RootElement.TryGetProperty("candidates", out var candidates) &&
-            candidates.ValueKind == JsonValueKind.Array && candidates.GetArrayLength() > 0 &&
-            candidates[0].TryGetProperty("content", out var content) &&
-            content.TryGetProperty("parts", out var parts) && parts.ValueKind == JsonValueKind.Array)
+        const string instruction = "Transcribe the attached speech accurately. The speaker may use Hindi, Hinglish, or English and may switch languages mid-sentence. Preserve the original words and language; return only the transcript without commentary.";
+        var parts = new object[]
         {
-            var text = string.Join(Environment.NewLine,
-                parts.EnumerateArray()
-                    .Where(part => part.TryGetProperty("text", out _))
-                    .Select(part => part.GetProperty("text").GetString())
-                    .Where(value => !string.IsNullOrWhiteSpace(value)));
-            if (!string.IsNullOrWhiteSpace(text)) return text;
-        }
+            new { text = instruction },
+            new { inline_data = new { mime_type = "audio/wav", data = Convert.ToBase64String(wavAudio.Span) } }
+        };
+        var endpoint = new Uri(ApiBase + "models/" + Uri.EscapeDataString(_model) + ":generateContent");
+        var request = CreateRequest(HttpMethod.Post, endpoint, apiKey);
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(new { contents = new[] { new { role = "user", parts } } }),
+            Encoding.UTF8,
+            "application/json");
+        return SendAndReadTextAsync(request, cancellationToken);
+    }
 
-        throw new InvalidOperationException("Gemini returned no text candidate. The response may have been blocked or empty.");
+    private async Task<string> SendAndReadTextAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        using (request)
+        using (var response = await _httpClient.SendAsync(
+                   request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
+        {
+            await EnsureSuccessAsync(response).ConfigureAwait(false);
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var document = await JsonDocument.ParseAsync(
+                stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (document.RootElement.TryGetProperty("candidates", out var candidates) &&
+                candidates.ValueKind == JsonValueKind.Array && candidates.GetArrayLength() > 0 &&
+                candidates[0].TryGetProperty("content", out var content) &&
+                content.TryGetProperty("parts", out var responseParts) &&
+                responseParts.ValueKind == JsonValueKind.Array)
+            {
+                var text = string.Join(Environment.NewLine,
+                    responseParts.EnumerateArray()
+                        .Where(part => part.TryGetProperty("text", out _))
+                        .Select(part => part.GetProperty("text").GetString())
+                        .Where(value => !string.IsNullOrWhiteSpace(value)));
+                if (!string.IsNullOrWhiteSpace(text)) return text;
+            }
+
+            throw new InvalidOperationException("Gemini returned no text candidate. The response may have been blocked or empty.");
+        }
     }
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, Uri uri, string apiKey)
@@ -81,7 +116,6 @@ public sealed class GeminiApiClient : IGeminiApiClient
             HttpStatusCode.TooManyRequests => "Gemini rate limit or quota reached. Try again later or check your Google AI Studio usage.",
             _ => "Gemini request failed (HTTP " + (int)status + "). Check the key, model availability and network connection."
         };
-        response.Dispose();
         throw new GeminiApiException(status, message);
     }
 
