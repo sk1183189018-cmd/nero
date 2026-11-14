@@ -39,7 +39,7 @@ public sealed partial class WindowsCredentialManagerSecretStore : IDeviceSecretS
         }
         finally
         {
-            Marshal.FreeHGlobal(blob);
+            Marshal.ZeroFreeGlobalAllocUnicode(blob);
             Marshal.FreeHGlobal(userName);
             Marshal.FreeHGlobal(target);
         }
@@ -118,7 +118,7 @@ public sealed partial class WindowsCredentialManagerSecretStore : IDeviceSecretS
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool CredDelete(string targetName, uint type, uint flags);
 
-        [LibraryImport("Kernel32.dll", EntryPoint = "CredFree")]
+        [LibraryImport("Advapi32.dll", EntryPoint = "CredFree")]
         internal static partial void CredFree(IntPtr buffer);
     }
 }
