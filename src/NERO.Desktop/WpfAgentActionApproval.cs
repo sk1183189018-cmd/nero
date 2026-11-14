@@ -13,7 +13,8 @@ public sealed class WpfAgentActionApproval : IAgentActionApproval
                 summary + "\n\nNERO will perform only the action described above.",
                 "Approve NERO action",
                 System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Warning));
+                System.Windows.MessageBoxImage.Warning,
+                System.Windows.MessageBoxResult.No));
         cancellationToken.ThrowIfCancellationRequested();
         return result == System.Windows.MessageBoxResult.Yes;
     }
