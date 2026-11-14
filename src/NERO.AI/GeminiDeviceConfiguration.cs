@@ -20,8 +20,9 @@ public sealed class GeminiDeviceConfiguration
     public async Task ConfigureAsync(string apiKey, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
+        apiKey = apiKey.Trim();
         await _gemini.ValidateApiKeyAsync(apiKey, cancellationToken).ConfigureAwait(false);
-        _secretStore.Save(CredentialTarget, apiKey.Trim());
+        _secretStore.Save(CredentialTarget, apiKey);
     }
 
     public bool Remove() => _secretStore.Delete(CredentialTarget);
