@@ -2,6 +2,12 @@
 
 NERO is a Windows-first, voice-oriented AI desktop assistant built for Windows 11.
 
+## Current status — desktop shell and device Gemini setup
+
+The current branch also adds a system-tray icon, a tray menu to reopen or exit NERO, close-to-tray behavior, current-user Windows sign-in startup registration, and start-minimized behavior. Windows CI has successfully restored, built, and tested the branch head at commit `47a0b850146496f353165e6b64bbaf7ad0060bc5`.
+
+The desktop screen includes a basic prompt panel that sends a user-entered prompt to Gemini and displays the real provider response once a device key is configured.
+
 ## Current status — Phase 3 device Gemini setup
 
 The application now has a device-local Gemini setup flow. A user can enter a key, validate it with Google's Gemini API, save it to Windows Credential Manager, replace it, or remove it. The secret is sent in the `x-goog-api-key` HTTP header and is not stored in `settings.json`.
