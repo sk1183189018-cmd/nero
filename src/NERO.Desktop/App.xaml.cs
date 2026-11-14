@@ -30,6 +30,7 @@ public partial class App : WpfApplication
                     client.Timeout = TimeSpan.FromSeconds(45));
                 services.AddSingleton<GeminiDeviceConfiguration>();
                 services.AddSingleton<IMicrophoneRecorder, WindowsMicrophoneRecorder>();
+                services.AddSingleton<ITextToSpeech, WindowsTextToSpeech>();
                 services.AddSingleton<MainWindow>();
             })
             .Build();
