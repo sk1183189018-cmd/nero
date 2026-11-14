@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Windows;
+using Forms = System.Windows.Forms;
 using System.Windows.Controls;
 using NERO.AI;
 using NERO.Core.Settings;
@@ -10,6 +12,8 @@ public partial class MainWindow : Window
     private readonly JsonNeroUserSettingsStore _settingsStore;
     private readonly GeminiDeviceConfiguration _geminiConfiguration;
     private readonly IGeminiApiClient _geminiClient;
+    private readonly Forms.NotifyIcon _trayIcon;
+    private bool _exitRequested;
 
     public MainWindow(JsonNeroUserSettingsStore settingsStore, GeminiDeviceConfiguration geminiConfiguration, IGeminiApiClient geminiClient)
     {
@@ -17,6 +21,7 @@ public partial class MainWindow : Window
         _geminiConfiguration = geminiConfiguration;
         _geminiClient = geminiClient;
         InitializeComponent();
+        _trayIcon = CreateTrayIcon();
         Loaded += MainWindow_Loaded;
     }
 
@@ -34,6 +39,8 @@ public partial class MainWindow : Window
                 "hi-IN" => 2,
                 _ => 0
             };
+            try { NeroStartupRegistration.SetEnabled(settings.LaunchAtStartup); }
+            catch (Exception ex) { SaveStatusText.Text = $\"Startup registration unavailable: {ex.Message}\"; }
             RefreshGeminiStatus();
         }
         catch (Exception ex)
@@ -111,6 +118,51 @@ public partial class MainWindow : Window
         }
     }
 
+
+    private Forms.NotifyIcon CreateTrayIcon()
+    {
+        var menu = new Forms.ContextMenuStrip();
+        menu.Items.Add("Open NERO", null, (_, _) => Dispatcher.Invoke(ShowFromTray));
+        menu.Items.Add("Exit NERO", null, (_, _) => Dispatcher.Invoke(ExitFromTray));
+        var icon = new Forms.NotifyIcon
+        {
+            Icon = System.Drawing.SystemIcons.Application,
+            Text = "NERO",
+            ContextMenuStrip = menu,
+            Visible = true
+        };
+        icon.DoubleClick += (_, _) => Dispatcher.Invoke(ShowFromTray);
+        return icon;
+    }
+
+    private void ShowFromTray()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+    }
+
+    private void ExitFromTray()
+    {
+        _exitRequested = true;
+        DisposeTrayIcon();
+        Application.Current.Shutdown();
+    }
+
+    private void Window_Closing(object? sender, CancelEventArgs e)
+    {
+        if (_exitRequested) return;
+        e.Cancel = true;
+        Hide();
+        _trayIcon.ShowBalloonTip(1800, "NERO is running", "Open NERO from the system tray.", Forms.ToolTipIcon.Info);
+    }
+
+    public void DisposeTrayIcon()
+    {
+        _trayIcon.Visible = false;
+        _trayIcon.Dispose();
+    }
+
     private void RemoveGeminiKey_Click(object sender, RoutedEventArgs e)
     {
         if (!_geminiConfiguration.IsConfigured)
@@ -144,6 +196,7 @@ public partial class MainWindow : Window
                 MicrophoneListeningEnabled = false,
                 SpeechLanguage = language
             };
+            NeroStartupRegistration.SetEnabled(settings.LaunchAtStartup);
             await _settingsStore.SaveAsync(settings);
             SaveStatusText.Text = "Settings saved on this device.";
         }
